@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>WI-MO-001 การควบคุม Drawing (ระบบออนไลน์ ISO 9001)</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 0;
+        }
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        body {
+            font-family: "Angsana UPC", "Angsana New", "TH SarabunPSK", "Sarabun", sans-serif;
+            font-size: 16pt;
+            color: #000;
+            line-height: 1.35;
+            margin: 0;
+            padding: 0;
+            background-color: #3b4045;
+        }
+
+        /* ==================== แถบควบคุมระบบออนไลน์ (ซ่อนเวลาสั่งพิมพ์) ==================== */
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 999;
+            background: #1e293b;
+            color: #fff;
+            padding: 10px 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            font-family: Tahoma, sans-serif;
+            font-size: 13px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+            border-bottom: 2px solid #0ea5e9;
+        }
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-online { background: #065f46; color: #6ee7b7; border: 1px solid #10b981; }
+        .status-offline { background: #78350f; color: #fde68a; border: 1px solid #f59e0b; }
+        .status-connecting { background: #1e3a8a; color: #93c5fd; border: 1px solid #3b82f6; }
+
+        .btn {
+            border: none;
+            padding: 7px 14px;
+            border-radius: 5px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: Tahoma, sans-serif;
+            transition: 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-view { background: #475569; color: #fff; }
+        .btn-view:hover { background: #334155; }
+        .btn-view.active { background: #0284c7; color: #fff; }
+        .btn-lock { background: #dc2626; color: #fff; }
+        .btn-lock.unlocked { background: #16a34a; color: #fff; }
+        .btn-save { background: #2563eb; color: #fff; display: none; }
+        .btn-save:hover { background: #1d4ed8; }
+        .btn-print { background: #0f766e; color: #fff; }
+        .btn-print:hover { background: #115e59; }
+
+        /* แถบแจ้งเตือนการควบคุมเอกสารเวลาพิมพ์ */
+        .uncontrolled-banner {
+            display: none;
+        }
+
+        /* ==================== โครงสร้างหน้ากระดาษ A4 ==================== */
+        .page {
+            width: 210mm;
+            height: 297mm;
+            padding: 15mm 18mm;
+            margin: 12mm auto;
+            background: #ffffff;
+            box-shadow: 0 0 12px rgba(0,0,0,0.6);
+            position: relative;
+            page-break-after: always;
+            overflow: hidden;
+            transition: all 0.25s ease;
+        }
+        .page:last-child {
+            page-break-after: avoid;
+        }
+
+        /* โหมดอ่านและกรอกข้อมูลแนวนอนบนหน้าจอ (ไม่ต้องเอียงคอ) */
+        body.horizontal-view .page.landscape-form-page {
+            width: 297mm;
+            height: 210mm;
+            padding: 12mm 16mm;
+        }
+        body.horizontal-view .page.landscape-form-page .rotated-canvas {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            top: auto;
+            left: auto;
+            transform: none !important;
+        }
+
+        /* เมื่อสั่งพิมพ์ (Ctrl+P) บังคับกลับเป็น A4 แนวตั้งหมุน -90 องศาเหมือนต้นฉบับ 100% */
+        @media print {
+            body, body.horizontal-view {
+                background-color: #ffffff;
+            }
+            .toolbar, .modal-overlay {
+                display: none !important;
+            }
+            .page, body.horizontal-view .page.landscape-form-page {
+                width: 210mm !important;
+                height: 297mm !important;
+                padding: 15mm 18mm !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+            }
+            body.horizontal-view .page.landscape-form-page .rotated-canvas {
+                position: absolute !important;
+                width: 265mm !important;
+                height: 175mm !important;
+                top: 50% !important;
+                left: 50% !important;
+                transform: translate(-50%, -50%) rotate(-90deg) !important;
+            }
+        }
+
+        /* ==================== หน้า 1 และ หน้า 2 ==================== */
+        table.header-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #000;
+            margin-bottom: 20px;
+            font-size: 15pt;
+            line-height: 1.25;
+        }
+        table.header-table td {
+            border: 1px solid #000;
+            padding: 3px 8px;
+            vertical-align: middle;
+        }
+        .doc-title {
+            text-align: center;
+            font-size: 18pt;
+            font-weight: bold;
+            margin: 22px 0 15px 0;
+            line-height: 1.4;
+        }
+        .approval-box {
+            width: 100%;
+            border: 1px solid #000;
+            padding: 15px 20px;
+            margin-top: 10px;
+            margin-bottom: 25px;
+            position: relative;
+            font-size: 16pt;
+        }
+        .watermark-container {
+            position: absolute;
+            top: 50%;
+            left: 53%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            opacity: 0.25;
+            pointer-events: none;
+            z-index: 0;
+            width: 85%;
+        }
+        table.approval-inner {
+            width: 100%;
+            border-collapse: collapse;
+            position: relative;
+            z-index: 1;
+        }
+        table.approval-inner td {
+            padding: 4px 5px;
+            vertical-align: bottom;
+            font-weight: bold;
+        }
+        .sign-line {
+            border-bottom: 1px solid #000;
+            height: 22px;
+            text-align: center;
+            font-weight: normal;
+        }
+        .spacer-row td {
+            height: 18px;
+        }
+        .history-label {
+            font-weight: bold;
+            font-size: 16pt;
+            margin-bottom: 5px;
+        }
+        table.history-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #000;
+            font-size: 16pt;
+        }
+        table.history-table th {
+            border: 1px solid #000;
+            padding: 6px 8px;
+            text-align: center;
+            font-weight: bold;
+        }
+        table.history-table td {
+            border-left: 1px solid #000;
+            border-right: 1px solid #000;
+            padding: 6px 10px;
+            vertical-align: top;
+        }
+        table.history-table tr.empty-space td {
+            height: 210px;
+            border-bottom: 1px solid #000;
+        }
+        .content-area {
+            font-size: 16pt;
+            line-height: 1.45;
+            margin-top: 15px;
+        }
+        .sec-main {
+            font-weight: bold;
+            margin-top: 14px;
+            margin-bottom: 6px;
+        }
+        .sec-sub {
+            margin-left: 32px;
+            margin-bottom: 6px;
+        }
+        .sec-sub-sub {
+            margin-left: 64px;
+            margin-bottom: 8px;
+            text-align: left;
+        }
+
+        /* ==================== หน้า 3 และ หน้า 4 (แบบฟอร์ม) ==================== */
+        .rotated-sheet-wrapper {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        .rotated-canvas {
+            position: absolute;
+            width: 265mm;
+            height: 175mm;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-90deg);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+        .form-top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 4px;
+            padding: 0 2px;
+        }
+        .form-main-title {
+            font-size: 18pt;
+            font-weight: bold;
+            text-align: center;
+            flex: 1;
+        }
+        .form-outer-frame {
+            border: 1px solid #000;
+            padding: 8px 10px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .form-sub-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14pt;
+            margin-bottom: 4px;
+        }
+        table.form-grid {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #000;
+            font-size: 13pt;
+            flex: 1;
+        }
+        table.form-grid th, table.form-grid td {
+            border: 1px solid #000;
+            text-align: center;
+            padding: 0 3px;
+            height: 21px;
+            line-height: 1.05;
+            position: relative;
+        }
+        table.form-grid th {
+            font-weight: bold;
+            background-color: #fff;
+        }
+
+        /* ช่องกรอกข้อมูลในตาราง */
+        .cell-input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 13pt;
+            color: #000;
+            padding: 0 4px;
+            outline: none;
+        }
+        .cell-input.center { text-align: center; }
+        .inline-input {
+            border: none;
+            border-bottom: 1px solid #000;
+            background: transparent;
+            font-family: inherit;
+            font-size: 14pt;
+            color: #000;
+            width: 130px;
+            text-align: center;
+            outline: none;
+        }
+        body.edit-mode .cell-input:not([readonly]),
+        body.edit-mode .inline-input:not([readonly]) {
+            background-color: rgba(14, 165, 233, 0.08);
+        }
+        body.edit-mode .cell-input:focus,
+        body.edit-mode .inline-input:focus {
+            background-color: rgba(250, 204, 21, 0.25);
+        }
+
+        /* ช่องติ๊กเครื่องหมายถูก (F-MO-007) */
+        .rev-check-cell {
+            cursor: default;
+            font-weight: bold;
+            font-size: 14pt;
+            user-select: none;
+        }
+        body.edit-mode .rev-check-cell {
+            cursor: pointer;
+        }
+        body.edit-mode .rev-check-cell:hover {
+            background-color: rgba(16, 185, 129, 0.15);
+        }
+
+        /* เส้นประทแยงมุมสำหรับใบแจกจ่าย Drawing (F-MO-008) */
+        td.diag-cell {
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%' viewBox='0 0 100 100' preserveAspectRatio='none'><line x1='0' y1='100' x2='100' y2='0' stroke='%23555555' stroke-width='1' stroke-dasharray='3,3'/></svg>");
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            padding: 0 !important;
+            vertical-align: top;
+        }
+        body.edit-mode td.diag-cell {
+            cursor: pointer;
+        }
+        body.edit-mode td.diag-cell:hover {
+            background-color: rgba(14, 165, 233, 0.15);
+        }
+        .diag-wrap {
+            width: 100%;
+            height: 20px;
+            position: relative;
+            font-size: 9.5pt;
+            line-height: 1;
+        }
+        .diag-sign {
+            position: absolute;
+            top: 1px;
+            left: 2px;
+            font-weight: bold;
+            color: #003399;
+            max-width: 70%;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .diag-date {
+            position: absolute;
+            bottom: 1px;
+            right: 2px;
+            color: #333;
+            font-size: 8.5pt;
+            white-space: nowrap;
+        }
+        @media print {
+            .diag-sign { color: #000; }
+            body.edit-mode .cell-input, body.edit-mode .inline-input {
+                background: transparent !important;
+            }
+        }
+
+        .form-code-bottom {
+            text-align: left;
+            font-size: 12pt;
+            margin-top: 3px;
+            font-family: Arial, sans-serif;
+        }
+
+        /* ==================== หน้าต่าง Modal สำหรับลงชื่อและใส่ PIN ==================== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            font-family: Tahoma, sans-serif;
+        }
+        .modal-box {
+            background: #fff;
+            padding: 20px 24px;
+            border-radius: 8px;
+            width: 360px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+            color: #1e293b;
+        }
+        .modal-box h3 {
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            color: #0f172a;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+        .modal-field {
+            margin-bottom: 12px;
+        }
+        .modal-field label {
+            display: block;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .modal-field input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+<body class="horizontal-view">
+
+<!-- ==================== แถบควบคุมระบบออนไลน์ ==================== -->
+<div class="toolbar">
+    <div class="toolbar-left">
+        <div><b>ระบบควบคุมเอกสาร ISO ออนไลน์ : WI-MO-001</b></div>
+        <span id="dbStatusBadge" class="status-badge status-connecting">กำลังเชื่อมต่อฐานข้อมูล...</span>
+    </div>
+    <div class="toolbar-right">
+        <button id="btnToggleView" class="btn btn-view active" onclick="toggleOrientationView()">
+            โหมดมุมมอง: แนวนอนอ่านง่าย (สลับเป็น A4)
+        </button>
+        <button id="btnLockMode" class="btn btn-lock" onclick="toggleEditLock()">
+            สถานะ: อ่านอย่างเดียว (ปลดล็อกด้วย PIN)
+        </button>
+        <button id="btnSaveCloud" class="btn btn-save" onclick="saveAllToSupabase()">
+            บันทึกข้อมูลลงฐานข้อมูล
+        </button>
+        <button class="btn btn-print" onclick="window.print()">
+            พิมพ์ / บันทึกเป็น PDF (Ctrl+P)
+        </button>
+    </div>
+</div>
+
+<!-- ==================== หน้าที่ 1 ==================== -->
+<div class="page">
+    <table class="header-table">
+        <tr>
+            <td style="width: 48%;"><b>บริษัท จากัวร์ อินดัสตรีส์ ( ประเทศไทย) จำกัด</b></td>
+            <td colspan="2" style="width: 52%;"><b>วิธีปฏิบัติงาน : การควบคุม Drawing</b></td>
+        </tr>
+        <tr>
+            <td>ที่อยู่ 22 ถนนบางแวก แขวงคลองขวาง</td>
+            <td style="width: 30%;">เลขที่เอกสาร WI-MO-001</td>
+            <td style="width: 22%;">แก้ไขครั้งที่ 00</td>
+        </tr>
+        <tr>
+            <td>เขตภาษีเจริญ กรุงเทพฯ 10160</td>
+            <td>วันที่บังคับใช้ 10/10/2560</td>
+            <td>หน้าที่ 1 / 2</td>
+        </tr>
+    </table>
+
+    <div class="doc-title">
+        วิธีปฏิบัติ (Work Instruction)<br>
+        เรื่อง การควบคุม Drawing
+    </div>
+
+    <div class="approval-box">
+        <div class="watermark-container">
+            <svg width="170" height="170" viewBox="0 0 200 200">
+                <circle cx="100" cy="100" r="88" fill="none" stroke="#00b377" stroke-width="14"/>
+                <circle cx="100" cy="100" r="65" fill="none" stroke="#00b377" stroke-width="3"/>
+                <text x="100" y="55" text-anchor="middle" fill="#00b377" font-size="14" font-family="Arial" font-weight="bold">REGISTRAR OF SYSTEMS</text>
+                <text x="100" y="112" text-anchor="middle" fill="#cc3333" font-size="38" font-family="serif" font-weight="bold">URS</text>
+                <text x="100" y="160" text-anchor="middle" fill="#00b377" font-size="18" font-family="Arial" font-weight="bold">• ISO 9001 •</text>
+            </svg>
+            <svg width="130" height="170" viewBox="0 0 140 180">
+                <rect x="10" y="10" width="120" height="150" fill="none" stroke="#00b377" stroke-width="3"/>
+                <path d="M40 75 L65 105 L105 45" fill="none" stroke="#00b377" stroke-width="12"/>
+                <text x="70" y="128" text-anchor="middle" fill="#00b377" font-size="18" font-family="Arial" font-weight="bold">UKAS</text>
+                <text x="70" y="142" text-anchor="middle" fill="#00b377" font-size="9" font-family="Arial">MANAGEMENT</text>
+                <text x="70" y="152" text-anchor="middle" fill="#00b377" font-size="9" font-family="Arial">SYSTEMS</text>
+            </svg>
+        </div>
+
+        <table class="approval-inner">
+            <tr>
+                <td style="width: 14%;">ผู้จัดทำ</td>
+                <td style="width: 52%;">นายไพบูลย์ ทองเจิม</td>
+                <td style="width: 34%;"><div class="sign-line"></div></td>
+            </tr>
+            <tr>
+                <td>ตำแหน่ง</td>
+                <td>ผู้ช่วยผู้จัดการฝ่ายออกแบบ ซ่อมสร้าง แม่พิมพ์</td>
+                <td><div class="sign-line">/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</div></td>
+            </tr>
+            <tr class="spacer-row"><td colspan="3"></td></tr>
+            <tr>
+                <td>ผู้ทบทวน</td>
+                <td>นายสินเลิศ ชาญฤทธิ์</td>
+                <td><div class="sign-line"></div></td>
+            </tr>
+            <tr>
+                <td>ตำแหน่ง</td>
+                <td>QMR</td>
+                <td><div class="sign-line">/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</div></td>
+            </tr>
+            <tr class="spacer-row"><td colspan="3"></td></tr>
+            <tr>
+                <td>ผู้อนุมัติ</td>
+                <td>นายสินเลิศ ชาญฤทธิ์</td>
+                <td><div class="sign-line"></div></td>
+            </tr>
+            <tr>
+                <td>ตำแหน่ง</td>
+                <td>QMR</td>
+                <td><div class="sign-line">/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</div></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="history-label">บันทึกการแก้ไข</div>
+    <table class="history-table">
+        <thead>
+            <tr>
+                <th style="width: 16%;">แก้ไขครั้งที่</th>
+                <th style="width: 19%;">วันที่</th>
+                <th style="width: 30%;">ผู้รับผิดชอบ</th>
+                <th style="width: 35%;">รายละเอียดการแก้ไข</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="text-align: left;">00</td>
+                <td style="text-align: left;">10/10/2560</td>
+                <td style="text-align: left;">นายไพบูลย์ ทองเจิม</td>
+                <td style="text-align: left;">ออกฉบับใหม่</td>
+            </tr>
+            <tr class="empty-space">
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- ==================== หน้าที่ 2 ==================== -->
+<div class="page">
+    <table class="header-table">
+        <tr>
+            <td style="width: 48%;"><b>บริษัท จากัวร์ อินดัสตรีส์ ( ประเทศไทย) จำกัด</b></td>
+            <td colspan="2" style="width: 52%;"><b>วิธีปฏิบัติงาน : การควบคุม Drawing</b></td>
+        </tr>
+        <tr>
+            <td>ที่อยู่ 22 ถนนบางแวก แขวงคลองขวาง</td>
+            <td style="width: 30%;">เลขที่เอกสาร WI-MO-001</td>
+            <td style="width: 22%;">แก้ไขครั้งที่ 00</td>
+        </tr>
+        <tr>
+            <td>เขตภาษีเจริญ กรุงเทพฯ 10160</td>
+            <td>วันที่บังคับใช้ 10/10/2560</td>
+            <td>หน้าที่ 2 / 2</td>
+        </tr>
+    </table>
+
+    <div class="content-area">
+        <div class="sec-main">1.0 &nbsp;&nbsp;&nbsp; คำจำกัดความ</div>
+        <div class="sec-sub">1.1 Drawing หมายถึง แบบของผลิตภัณฑ์เครื่องครัวฯ</div>
+
+        <div class="sec-main">2.0 &nbsp;&nbsp;&nbsp; วิธีปฏิบัติงาน</div>
+        <div class="sec-sub">2.1 &nbsp;&nbsp;&nbsp; จัดทำบัญชีรายการ Drawing</div>
+        <div class="sec-sub-sub">
+            2.1.1 &nbsp;&nbsp; จัดทำบัญชีรายการ Drawing (F-MO-007) เพื่อใช้กำหนดเลขที่ของ Drawing และ<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ใช้ควบคุมลำดับการแก้ไข เพื่อป้องกันการใช้เอกสารเก่ามาใช้งาน
+        </div>
+
+        <div class="sec-sub">2.2 &nbsp;&nbsp;&nbsp; การแจกจ่าย Drawing</div>
+        <div class="sec-sub-sub">
+            2.2.1 &nbsp;&nbsp; ทำการแจกจ่ายเอกสาร (Drawing) ไปตามแผนกและผู้ที่เกี่ยวข้อง โดยทำการ<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; บันทึกลงในใบควบคุมการแจกจ่าย Drawing (F-MO-008) และให้ผู้ที่ใช้เอกสาร<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; เซ็นต์ชื่อ/วันที่ลงในช่องแจกจ่าย
+        </div>
+
+        <div class="sec-sub">2.3 &nbsp;&nbsp;&nbsp; การแก้ไขและการเรียกเก็บ Drawing</div>
+        <div class="sec-sub-sub">
+            2.3.1 &nbsp;&nbsp; ในกรณีที่มีการแก้ไข Drawing ให้ทำการบันทึกโดยการทำเครื่องหมายถูกลงใน<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; บัญชีรายการ Drawing (F-MO-007) ในช่องลำดับการแก้ไข
+        </div>
+        <div class="sec-sub-sub">
+            2.3.2 &nbsp;&nbsp; ในกรณีที่มีการแก้ไขให้ทำการเรียกเก็บ Drawing โดยใช้ใบควบคุมการแจกจ่าย<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Drawing (F-MO-008) ติดตามเอกสาร และให้ผู้ที่ใช้เอกสารเซ็นต์ชื่อ/วันที่ลงใน<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ช่องรับคืน เพื่อป้องกันการนำเอา Drawing เก่ามาใช้งาน
+        </div>
+
+        <div class="sec-main">3.0 เอกสารที่เกี่ยวข้อง</div>
+        <div class="sec-sub">3.1 บัญชีรายการ Drawing (F-MO-007)</div>
+        <div class="sec-sub">3.2 ใบควบคุมการแจกจ่าย Drawing (F-MO-008)</div>
+        <div class="sec-sub">3.3 แบบฟอร์ม Drawing (F-MO-009)</div>
+    </div>
+</div>
+
+<!-- ==================== หน้าที่ 3 : บัญชีรายชื่อ Drawing (F-MO-007-00) ==================== -->
+<div class="page landscape-form-page">
+    <div class="rotated-sheet-wrapper">
+        <div class="rotated-canvas">
+            <div class="form-top-bar">
+                <div style="width: 180px;"></div>
+                <div class="form-main-title">บัญชีรายชื่อ Drawing</div>
+                <div style="width: 180px; text-align: right; font-size: 15pt;">
+                    เลขที่ <input type="text" id="f007_doc_no" class="inline-input" readonly oninput="onF007MetaChange()">
+                </div>
+            </div>
+            <div class="form-outer-frame">
+                <div class="form-sub-header">
+                    <div>ประเภทเอกสาร : Drawing</div>
+                    <div></div>
+                </div>
+                <table class="form-grid">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" style="width: 7%;">ลำดับที่</th>
+                            <th rowspan="2" style="width: 33%;">รหัสสินค้า</th>
+                            <th rowspan="2" style="width: 18%;">เลขที่เอกสาร</th>
+                            <th colspan="6" style="width: 42%;">แก้ไขครั้งที่</th>
+                        </tr>
+                        <tr>
+                            <th style="width: 7%;">00</th>
+                            <th style="width: 7%;">01</th>
+                            <th style="width: 7%;">02</th>
+                            <th style="width: 7%;">03</th>
+                            <th style="width: 7%;">04</th>
+                            <th style="width: 7%;">05</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody_f007"></tbody>
+                </table>
+            </div>
+            <div class="form-code-bottom">F-MO-007-00</div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== หน้าที่ 4 : ใบแจกจ่าย Drawing (สำเนาควบคุม) (F-MO-008-00) ==================== -->
+<div class="page landscape-form-page">
+    <div class="rotated-sheet-wrapper">
+        <div class="rotated-canvas">
+            <div class="form-top-bar">
+                <div style="width: 180px;"></div>
+                <div class="form-main-title">ใบแจกจ่าย Drawing (สำเนาควบคุม)</div>
+                <div style="width: 180px; text-align: right; font-size: 15pt;">
+                    เลขที่ <input type="text" id="f008_doc_no" class="inline-input" readonly oninput="onF008MetaChange()">
+                </div>
+            </div>
+            <div class="form-outer-frame">
+                <div class="form-sub-header">
+                    <div>
+                        รหัสสินค้า <input type="text" id="f008_product_code" class="inline-input" style="width: 220px;" readonly oninput="onF008MetaChange()">
+                    </div>
+                    <div></div>
+                </div>
+                <table class="form-grid">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" style="width: 6%;">ลำดับที่</th>
+                            <th rowspan="2" style="width: 24%;">กลุ่มงานที่ใช้</th>
+                            <th colspan="2" style="width: 14%;">ออกฉบับใหม่ ครั้งที่ 00</th>
+                            <th colspan="2" style="width: 14%;">แก้ไขครั้งที่ 01</th>
+                            <th colspan="2" style="width: 14%;">แก้ไขครั้งที่ 02</th>
+                            <th colspan="2" style="width: 14%;">แก้ไขครั้งที่ 03</th>
+                            <th colspan="2" style="width: 14%;">แก้ไขครั้งที่ 04</th>
+                        </tr>
+                        <tr>
+                            <th style="width: 7%;">แจกจ่าย</th>
+                            <th style="width: 7%;">เรียกคืน</th>
+                            <th style="width: 7%;">แจกจ่าย</th>
+                            <th style="width: 7%;">เรียกคืน</th>
+                            <th style="width: 7%;">แจกจ่าย</th>
+                            <th style="width: 7%;">เรียกคืน</th>
+                            <th style="width: 7%;">แจกจ่าย</th>
+                            <th style="width: 7%;">เรียกคืน</th>
+                            <th style="width: 7%;">แจกจ่าย</th>
+                            <th style="width: 7%;">เรียกคืน</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody_f008"></tbody>
+                </table>
+            </div>
+            <div class="form-code-bottom">F-MO-008-00</div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== Modal บันทึกชื่อ/วันที่ในช่องทแยงมุม (F-MO-008) ==================== -->
+<div id="diagModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3 id="diagModalTitle">บันทึกการแจกจ่าย / เรียกคืน Drawing</h3>
+        <div class="modal-field">
+            <label>ชื่อผู้เซ็นรับ / ผู้คืน (มุมบนซ้าย):</label>
+            <input type="text" id="modalSignInput" placeholder="เช่น ไพบูลย์, สมชาย...">
+        </div>
+        <div class="modal-field">
+            <label>วันที่ (วว/ดด/ปป - มุมล่างขวา):</label>
+            <input type="text" id="modalDateInput" placeholder="เช่น 18/10/69">
+        </div>
+        <div style="margin-bottom: 10px;">
+            <button class="btn btn-view" style="font-size: 12px; padding: 4px 10px;" onclick="fillTodayDate()">
+                ใส่วันที่วันนี้
+            </button>
+            <button class="btn btn-lock" style="font-size: 12px; padding: 4px 10px;" onclick="clearDiagCell()">
+                ล้างช่องนี้
+            </button>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-view" onclick="closeDiagModal()">ยกเลิก</button>
+            <button class="btn btn-print" onclick="confirmDiagModal()">ตกลง</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==================== ค่าการเชื่อมต่อ Supabase & Master PIN ====================
+    const SUPABASE_URL = "https://siiiifesdjuunwmwozfb.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_ohToE8Z_Fzo87uBtzdPDIg_cqHCi3HT";
+    const MASTER_PIN = "112233";
+
+    let isEditMode = false;
+    let isHorizontalView = true;
+    let activeDiagTarget = null;
+
+    // โครงสร้างข้อมูล 19 แถวตามฟอร์มต้นฉบับ
+    let stateF007 = Array.from({ length: 19 }, (_, i) => ({
+        row_no: i + 1,
+        doc_set_no: "",
+        product_code: "",
+        drawing_doc_no: "",
+        rev_00: false, rev_01: false, rev_02: false, rev_03: false, rev_04: false, rev_05: false
+    }));
+
+    let stateF008 = Array.from({ length: 19 }, (_, i) => ({
+        row_no: i + 1,
+        doc_set_no: "",
+        product_code: "",
+        department_name: "",
+        cells_data: {}
+    }));
+
+    const diagKeys = [
+        "r00_dist", "r00_ret",
+        "r01_dist", "r01_ret",
+        "r02_dist", "r02_ret",
+        "r03_dist", "r03_ret",
+        "r04_dist", "r04_ret"
+    ];
+
+    // ==================== สร้างตารางทั้ง 19 แถว ====================
+    function renderTables() {
+        // สร้างตาราง F-MO-007
+        const tbody007 = document.getElementById("tbody_f007");
+        tbody007.innerHTML = "";
+        document.getElementById("f007_doc_no").value = stateF007[0]?.doc_set_no || "";
+
+        stateF007.forEach((row, idx) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${row.row_no}</td>
+                <td><input type="text" class="cell-input" value="${escapeHtml(row.product_code)}" ${isEditMode ? "" : "readonly"} oninput="updateF007Text(${idx}, 'product_code', this.value)"></td>
+                <td><input type="text" class="cell-input center" value="${escapeHtml(row.drawing_doc_no)}" ${isEditMode ? "" : "readonly"} oninput="updateF007Text(${idx}, 'drawing_doc_no', this.value)"></td>
+                ${["rev_00","rev_01","rev_02","rev_03","rev_04","rev_05"].map(revKey => `
+                    <td class="rev-check-cell" onclick="toggleRevCheck(${idx}, '${revKey}')">${row[revKey] ? "✓" : ""}</td>
+                `).join("")}
+            `;
+            tbody007.appendChild(tr);
+        });
+
+        // สร้างตาราง F-MO-008
+        const tbody008 = document.getElementById("tbody_f008");
+        tbody008.innerHTML = "";
+        document.getElementById("f008_doc_no").value = stateF008[0]?.doc_set_no || "";
+        document.getElementById("f008_product_code").value = stateF008[0]?.product_code || "";
+
+        stateF008.forEach((row, idx) => {
+            const tr = document.createElement("tr");
+            const diagHtml = diagKeys.map(k => {
+                const cellObj = (row.cells_data && row.cells_data[k]) ? row.cells_data[k] : { sign: "", date: "" };
+                return `
+                    <td class="diag-cell" onclick="openDiagModal(${idx}, '${k}')">
+                        <div class="diag-wrap">
+                            <span class="diag-sign">${escapeHtml(cellObj.sign || "")}</span>
+                            <span class="diag-date">${escapeHtml(cellObj.date || "")}</span>
+                        </div>
+                    </td>
+                `;
+            }).join("");
+
+            tr.innerHTML = `
+                <td>${row.row_no}</td>
+                <td><input type="text" class="cell-input" value="${escapeHtml(row.department_name)}" ${isEditMode ? "" : "readonly"} oninput="updateF008Dept(${idx}, this.value)"></td>
+                ${diagHtml}
+            `;
+            tbody008.appendChild(tr);
+        });
+    }
+
+    function escapeHtml(str) {
+        if (!str) return "";
+        return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    // ==================== การอัปเดตค่าในตาราง ====================
+    function onF007MetaChange() {
+        const val = document.getElementById("f007_doc_no").value;
+        stateF007.forEach(r => r.doc_set_no = val);
+        saveToLocalBackup();
+    }
+
+    function onF008MetaChange() {
+        const docVal = document.getElementById("f008_doc_no").value;
+        const prodVal = document.getElementById("f008_product_code").value;
+        stateF008.forEach(r => {
+            r.doc_set_no = docVal;
+            r.product_code = prodVal;
+        });
+        saveToLocalBackup();
+    }
+
+    function updateF007Text(idx, field, val) {
+        stateF007[idx][field] = val;
+        saveToLocalBackup();
+    }
+
+    function toggleRevCheck(idx, revKey) {
+        if (!isEditMode) return;
+        stateF007[idx][revKey] = !stateF007[idx][revKey];
+        renderTables();
+        saveToLocalBackup();
+    }
+
+    function updateF008Dept(idx, val) {
+        stateF008[idx].department_name = val;
+        saveToLocalBackup();
+    }
+
+    // ==================== จัดการ Modal ช่องเส้นประทแยงมุม (F-MO-008) ====================
+    function openDiagModal(rowIdx, key) {
+        if (!isEditMode) return;
+        activeDiagTarget = { rowIdx, key };
+        const current = (stateF008[rowIdx].cells_data && stateF008[rowIdx].cells_data[key]) || { sign: "", date: "" };
+        document.getElementById("modalSignInput").value = current.sign || "";
+        document.getElementById("modalDateInput").value = current.date || "";
+        document.getElementById("diagModal").style.display = "flex";
+        document.getElementById("modalSignInput").focus();
+    }
+
+    function closeDiagModal() {
+        document.getElementById("diagModal").style.display = "none";
+        activeDiagTarget = null;
+    }
+
+    function fillTodayDate() {
+        const d = new Date();
+        const dd = String(d.getDate()).padStart(2, "0");
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const yy = String(d.getFullYear() + 543).slice(-2);
+        document.getElementById("modalDateInput").value = `${dd}/${mm}/${yy}`;
+    }
+
+    function clearDiagCell() {
+        document.getElementById("modalSignInput").value = "";
+        document.getElementById("modalDateInput").value = "";
+    }
+
+    function confirmDiagModal() {
+        if (!activeDiagTarget) return;
+        const { rowIdx, key } = activeDiagTarget;
+        if (!stateF008[rowIdx].cells_data) stateF008[rowIdx].cells_data = {};
+        stateF008[rowIdx].cells_data[key] = {
+            sign: document.getElementById("modalSignInput").value.trim(),
+            date: document.getElementById("modalDateInput").value.trim()
+        };
+        closeDiagModal();
+        renderTables();
+        saveToLocalBackup();
+    }
+
+    // ==================== สลับโหมดมุมมอง และ ปลดล็อกด้วย PIN ====================
+    function toggleOrientationView() {
+        isHorizontalView = !isHorizontalView;
+        const btn = document.getElementById("btnToggleView");
+        if (isHorizontalView) {
+            document.body.classList.add("horizontal-view");
+            btn.classList.add("active");
+            btn.innerText = "โหมดมุมมอง: แนวนอนอ่านง่าย (สลับเป็น A4)";
+        } else {
+            document.body.classList.remove("horizontal-view");
+            btn.classList.remove("active");
+            btn.innerText = "โหมดมุมมอง: กระดาษ A4 เสมือนพิมพ์ (สลับแนวนอน)";
+        }
+    }
+
+    function toggleEditLock() {
+        if (!isEditMode) {
+            const pin = prompt("กรุณากรอกรหัส Master PIN เพื่อปลดล็อกการแก้ไขข้อมูล:");
+            if (pin === MASTER_PIN) {
+                isEditMode = true;
+                document.body.classList.add("edit-mode");
+                document.getElementById("f007_doc_no").removeAttribute("readonly");
+                document.getElementById("f008_doc_no").removeAttribute("readonly");
+                document.getElementById("f008_product_code").removeAttribute("readonly");
+                const btn = document.getElementById("btnLockMode");
+                btn.classList.add("unlocked");
+                btn.innerText = "สถานะ: โหมดแก้ไขข้อมูล (คลิกเพื่อล็อก)";
+                document.getElementById("btnSaveCloud").style.display = "inline-flex";
+                renderTables();
+            } else if (pin !== null) {
+                alert("รหัส PIN ไม่ถูกต้อง!");
+            }
+        } else {
+            isEditMode = false;
+            document.body.classList.remove("edit-mode");
+            document.getElementById("f007_doc_no").setAttribute("readonly", true);
+            document.getElementById("f008_doc_no").setAttribute("readonly", true);
+            document.getElementById("f008_product_code").setAttribute("readonly", true);
+            const btn = document.getElementById("btnLockMode");
+            btn.classList.remove("unlocked");
+            btn.innerText = "สถานะ: อ่านอย่างเดียว (ปลดล็อกด้วย PIN)";
+            document.getElementById("btnSaveCloud").style.display = "none";
+            renderTables();
+        }
+    }
+
+    // ==================== เชื่อมต่อฐานข้อมูล Supabase & Local Backup ====================
+    function saveToLocalBackup() {
+        localStorage.setItem("wi_mo_001_f007", JSON.stringify(stateF007));
+        localStorage.setItem("wi_mo_001_f008", JSON.stringify(stateF008));
+    }
+
+    function loadFromLocalBackup() {
+        const local007 = localStorage.getItem("wi_mo_001_f007");
+        const local008 = localStorage.getItem("wi_mo_001_f008");
+        if (local007) stateF007 = JSON.parse(local007);
+        if (local008) stateF008 = JSON.parse(local008);
+    }
+
+    async function fetchFromSupabase() {
+        const badge = document.getElementById("dbStatusBadge");
+        loadFromLocalBackup();
+        renderTables();
+
+        try {
+            const headers = {
+                "apikey": SUPABASE_KEY,
+                "Authorization": `Bearer ${SUPABASE_KEY}`
+            };
+            const [res007, res008] = await Promise.all([
+                fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_master?select=*&order=row_no.asc`, { headers }),
+                fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_distribution?select=*&order=row_no.asc`, { headers })
+            ]);
+
+            if (!res007.ok || !res008.ok) throw new Error("Table not initialized or network blocked");
+
+            const data007 = await res007.json();
+            const data008 = await res008.json();
+
+            if (Array.isArray(data007) && data007.length > 0) {
+                data007.forEach(item => {
+                    const idx = item.row_no - 1;
+                    if (stateF007[idx]) stateF007[idx] = { ...stateF007[idx], ...item };
+                });
+            }
+            if (Array.isArray(data008) && data008.length > 0) {
+                data008.forEach(item => {
+                    const idx = item.row_no - 1;
+                    if (stateF008[idx]) stateF008[idx] = { ...stateF008[idx], ...item };
+                });
+            }
+
+            badge.className = "status-badge status-online";
+            badge.innerText = "เชื่อมต่อ Supabase สำเร็จ (Online)";
+            saveToLocalBackup();
+            renderTables();
+        } catch (err) {
+            badge.className = "status-badge status-offline";
+            badge.innerText = "โหมดสำรองในเครื่อง (รอสร้างตาราง / ออฟไลน์)";
+        }
+    }
+
+    async function saveAllToSupabase() {
+        const btn = document.getElementById("btnSaveCloud");
+        const origText = btn.innerText;
+        btn.innerText = "กำลังบันทึก...";
+        saveToLocalBackup();
+
+        try {
+            const headers = {
+                "apikey": SUPABASE_KEY,
+                "Authorization": `Bearer ${SUPABASE_KEY}`,
+                "Content-Type": "application/json",
+                "Prefer": "resolution=merge-duplicates"
+            };
+
+            const [res1, res2] = await Promise.all([
+                fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_master`, {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify(stateF007)
+                }),
+                fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_distribution`, {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify(stateF008)
+                })
+            ]);
+
+            if (!res1.ok || !res2.ok) throw new Error("Save failed");
+
+            const badge = document.getElementById("dbStatusBadge");
+            badge.className = "status-badge status-online";
+            badge.innerText = "บันทึกขึ้น Supabase ล่าสุดเรียบร้อย";
+            alert("บันทึกข้อมูลลงฐานข้อมูล Supabase สำเร็จ!");
+        } catch (err) {
+            alert("บันทึกไว้ในเครื่องเรียบร้อยแล้ว (แต่ยังไม่สามารถส่งขึ้น Supabase ได้ กรุณาตรวจสอบว่าได้รันคำสั่ง SQL สร้างตารางหรือยัง)");
+        } finally {
+            btn.innerText = origText;
+        }
+    }
+
+    // เริ่มทำงานทันทีเมื่อเปิดหน้าเว็บ
+    window.addEventListener("DOMContentLoaded", fetchFromSupabase);
+</script>
+
+</body>
+</html>
