@@ -23,7 +23,7 @@
             background-color: #3b4045;
         }
 
-        /* ==================== แถบควบคุมระบบออนไลน์ (ซ่อนเวลาสั่งพิมพ์) ==================== */
+        /* ==================== แถบควบคุมระบบออนไลน์ ==================== */
         .toolbar {
             position: sticky;
             top: 0;
@@ -89,11 +89,6 @@
         .btn-print { background: #0f766e; color: #fff; }
         .btn-print:hover { background: #115e59; }
 
-        /* แถบแจ้งเตือนการควบคุมเอกสารเวลาพิมพ์ */
-        .uncontrolled-banner {
-            display: none;
-        }
-
         /* ==================== โครงสร้างหน้ากระดาษ A4 ==================== */
         .page {
             width: 210mm;
@@ -111,7 +106,6 @@
             page-break-after: avoid;
         }
 
-        /* โหมดอ่านและกรอกข้อมูลแนวนอนบนหน้าจอ (ไม่ต้องเอียงคอ) */
         body.horizontal-view .page.landscape-form-page {
             width: 297mm;
             height: 210mm;
@@ -126,7 +120,6 @@
             transform: none !important;
         }
 
-        /* เมื่อสั่งพิมพ์ (Ctrl+P) บังคับกลับเป็น A4 แนวตั้งหมุน -90 องศาเหมือนต้นฉบับ 100% */
         @media print {
             body, body.horizontal-view {
                 background-color: #ffffff;
@@ -212,62 +205,24 @@
             text-align: center;
             font-weight: normal;
         }
-        .spacer-row td {
-            height: 18px;
-        }
-        .history-label {
-            font-weight: bold;
-            font-size: 16pt;
-            margin-bottom: 5px;
-        }
+        .spacer-row td { height: 18px; }
+        .history-label { font-weight: bold; font-size: 16pt; margin-bottom: 5px; }
         table.history-table {
             width: 100%;
             border-collapse: collapse;
             border: 1px solid #000;
             font-size: 16pt;
         }
-        table.history-table th {
-            border: 1px solid #000;
-            padding: 6px 8px;
-            text-align: center;
-            font-weight: bold;
-        }
-        table.history-table td {
-            border-left: 1px solid #000;
-            border-right: 1px solid #000;
-            padding: 6px 10px;
-            vertical-align: top;
-        }
-        table.history-table tr.empty-space td {
-            height: 210px;
-            border-bottom: 1px solid #000;
-        }
-        .content-area {
-            font-size: 16pt;
-            line-height: 1.45;
-            margin-top: 15px;
-        }
-        .sec-main {
-            font-weight: bold;
-            margin-top: 14px;
-            margin-bottom: 6px;
-        }
-        .sec-sub {
-            margin-left: 32px;
-            margin-bottom: 6px;
-        }
-        .sec-sub-sub {
-            margin-left: 64px;
-            margin-bottom: 8px;
-            text-align: left;
-        }
+        table.history-table th { border: 1px solid #000; padding: 6px 8px; text-align: center; font-weight: bold; }
+        table.history-table td { border-left: 1px solid #000; border-right: 1px solid #000; padding: 6px 10px; vertical-align: top; }
+        table.history-table tr.empty-space td { height: 210px; border-bottom: 1px solid #000; }
+        .content-area { font-size: 16pt; line-height: 1.45; margin-top: 15px; }
+        .sec-main { font-weight: bold; margin-top: 14px; margin-bottom: 6px; }
+        .sec-sub { margin-left: 32px; margin-bottom: 6px; }
+        .sec-sub-sub { margin-left: 64px; margin-bottom: 8px; text-align: left; }
 
         /* ==================== หน้า 3 และ หน้า 4 (แบบฟอร์ม) ==================== */
-        .rotated-sheet-wrapper {
-            width: 100%;
-            height: 100%;
-            position: relative;
-        }
+        .rotated-sheet-wrapper { width: 100%; height: 100%; position: relative; }
         .rotated-canvas {
             position: absolute;
             width: 265mm;
@@ -279,40 +234,11 @@
             flex-direction: column;
             justify-content: flex-start;
         }
-        .form-top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-bottom: 4px;
-            padding: 0 2px;
-        }
-        .form-main-title {
-            font-size: 18pt;
-            font-weight: bold;
-            text-align: center;
-            flex: 1;
-        }
-        .form-outer-frame {
-            border: 1px solid #000;
-            padding: 8px 10px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-        .form-sub-header {
-            display: flex;
-            justify-content: space-between;
-            font-size: 14pt;
-            margin-bottom: 4px;
-        }
-        table.form-grid {
-            width: 100%;
-            border-collapse: collapse;
-            border: 1px solid #000;
-            font-size: 13pt;
-            flex: 1;
-        }
+        .form-top-bar { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px; padding: 0 2px; }
+        .form-main-title { font-size: 18pt; font-weight: bold; text-align: center; flex: 1; }
+        .form-outer-frame { border: 1px solid #000; padding: 8px 10px; flex: 1; display: flex; flex-direction: column; position: relative; }
+        .form-sub-header { display: flex; justify-content: space-between; font-size: 14pt; margin-bottom: 4px; }
+        table.form-grid { width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 13pt; flex: 1; }
         table.form-grid th, table.form-grid td {
             border: 1px solid #000;
             text-align: center;
@@ -321,12 +247,8 @@
             line-height: 1.05;
             position: relative;
         }
-        table.form-grid th {
-            font-weight: bold;
-            background-color: #fff;
-        }
+        table.form-grid th { font-weight: bold; background-color: #fff; }
 
-        /* ช่องกรอกข้อมูลในตาราง */
         .cell-input {
             width: 100%;
             height: 100%;
@@ -359,21 +281,10 @@
             background-color: rgba(250, 204, 21, 0.25);
         }
 
-        /* ช่องติ๊กเครื่องหมายถูก (F-MO-007) */
-        .rev-check-cell {
-            cursor: default;
-            font-weight: bold;
-            font-size: 14pt;
-            user-select: none;
-        }
-        body.edit-mode .rev-check-cell {
-            cursor: pointer;
-        }
-        body.edit-mode .rev-check-cell:hover {
-            background-color: rgba(16, 185, 129, 0.15);
-        }
+        .rev-check-cell { cursor: default; font-weight: bold; font-size: 14pt; user-select: none; }
+        body.edit-mode .rev-check-cell { cursor: pointer; }
+        body.edit-mode .rev-check-cell:hover { background-color: rgba(16, 185, 129, 0.15); }
 
-        /* เส้นประทแยงมุมสำหรับใบแจกจ่าย Drawing (F-MO-008) */
         td.diag-cell {
             background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%' viewBox='0 0 100 100' preserveAspectRatio='none'><line x1='0' y1='100' x2='100' y2='0' stroke='%23555555' stroke-width='1' stroke-dasharray='3,3'/></svg>");
             background-size: 100% 100%;
@@ -381,104 +292,35 @@
             padding: 0 !important;
             vertical-align: top;
         }
-        body.edit-mode td.diag-cell {
-            cursor: pointer;
-        }
-        body.edit-mode td.diag-cell:hover {
-            background-color: rgba(14, 165, 233, 0.15);
-        }
-        .diag-wrap {
-            width: 100%;
-            height: 20px;
-            position: relative;
-            font-size: 9.5pt;
-            line-height: 1;
-        }
-        .diag-sign {
-            position: absolute;
-            top: 1px;
-            left: 2px;
-            font-weight: bold;
-            color: #003399;
-            max-width: 70%;
-            overflow: hidden;
-            white-space: nowrap;
-        }
-        .diag-date {
-            position: absolute;
-            bottom: 1px;
-            right: 2px;
-            color: #333;
-            font-size: 8.5pt;
-            white-space: nowrap;
-        }
+        body.edit-mode td.diag-cell { cursor: pointer; }
+        body.edit-mode td.diag-cell:hover { background-color: rgba(14, 165, 233, 0.15); }
+        .diag-wrap { width: 100%; height: 20px; position: relative; font-size: 9.5pt; line-height: 1; }
+        .diag-sign { position: absolute; top: 1px; left: 2px; font-weight: bold; color: #003399; max-width: 70%; overflow: hidden; white-space: nowrap; }
+        .diag-date { position: absolute; bottom: 1px; right: 2px; color: #333; font-size: 8.5pt; white-space: nowrap; }
+
         @media print {
             .diag-sign { color: #000; }
-            body.edit-mode .cell-input, body.edit-mode .inline-input {
-                background: transparent !important;
-            }
+            body.edit-mode .cell-input, body.edit-mode .inline-input { background: transparent !important; }
         }
 
-        .form-code-bottom {
-            text-align: left;
-            font-size: 12pt;
-            margin-top: 3px;
-            font-family: Arial, sans-serif;
-        }
+        .form-code-bottom { text-align: left; font-size: 12pt; margin-top: 3px; font-family: Arial, sans-serif; }
 
-        /* ==================== หน้าต่าง Modal สำหรับลงชื่อและใส่ PIN ==================== */
+        /* Modal ลงชื่อ */
         .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.65);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-            font-family: Tahoma, sans-serif;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+            display: none; align-items: center; justify-content: center; z-index: 2000; font-family: Tahoma, sans-serif;
         }
-        .modal-box {
-            background: #fff;
-            padding: 20px 24px;
-            border-radius: 8px;
-            width: 360px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-            color: #1e293b;
-        }
-        .modal-box h3 {
-            margin: 0 0 12px 0;
-            font-size: 16px;
-            color: #0f172a;
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 8px;
-        }
-        .modal-field {
-            margin-bottom: 12px;
-        }
-        .modal-field label {
-            display: block;
-            font-size: 13px;
-            font-weight: bold;
-            margin-bottom: 4px;
-        }
-        .modal-field input {
-            width: 100%;
-            padding: 8px 10px;
-            border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            margin-top: 16px;
-        }
+        .modal-box { background: #fff; padding: 20px 24px; border-radius: 8px; width: 360px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); color: #1e293b; }
+        .modal-box h3 { margin: 0 0 12px 0; font-size: 16px; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+        .modal-field { margin-bottom: 12px; }
+        .modal-field label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 4px; }
+        .modal-field input { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
     </style>
 </head>
 <body class="horizontal-view">
 
-<!-- ==================== แถบควบคุมระบบออนไลน์ ==================== -->
+<!-- แถบควบคุมระบบออนไลน์ -->
 <div class="toolbar">
     <div class="toolbar-left">
         <div><b>ระบบควบคุมเอกสาร ISO ออนไลน์ : WI-MO-001</b></div>
@@ -595,12 +437,7 @@
                 <td style="text-align: left;">นายไพบูลย์ ทองเจิม</td>
                 <td style="text-align: left;">ออกฉบับใหม่</td>
             </tr>
-            <tr class="empty-space">
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-            </tr>
+            <tr class="empty-space"><td></td><td></td><td></td><td></td></tr>
         </tbody>
     </table>
 </div>
@@ -715,7 +552,7 @@
             <div class="form-outer-frame">
                 <div class="form-sub-header">
                     <div>
-                        รหัสสินค้า <input type="text" id="f008_product_code" class="inline-input" style="width: 220px;" readonly oninput="onF008MetaChange()">
+                        รหัสสินค้า <input type="text" id="f008_product_code" class="inline-input" style="width: 220px;" list="workItemsList" readonly oninput="onF008MetaChange()">
                     </div>
                     <div></div>
                 </div>
@@ -751,7 +588,10 @@
     </div>
 </div>
 
-<!-- ==================== Modal บันทึกชื่อ/วันที่ในช่องทแยงมุม (F-MO-008) ==================== -->
+<!-- Datalist สำหรับ Smart Dropdown ดึง work_code จาก work_items -->
+<datalist id="workItemsList"></datalist>
+
+<!-- Modal บันทึกชื่อ/วันที่ -->
 <div id="diagModal" class="modal-overlay">
     <div class="modal-box">
         <h3 id="diagModalTitle">บันทึกการแจกจ่าย / เรียกคืน Drawing</h3>
@@ -764,12 +604,8 @@
             <input type="text" id="modalDateInput" placeholder="เช่น 18/10/69">
         </div>
         <div style="margin-bottom: 10px;">
-            <button class="btn btn-view" style="font-size: 12px; padding: 4px 10px;" onclick="fillTodayDate()">
-                ใส่วันที่วันนี้
-            </button>
-            <button class="btn btn-lock" style="font-size: 12px; padding: 4px 10px;" onclick="clearDiagCell()">
-                ล้างช่องนี้
-            </button>
+            <button class="btn btn-view" style="font-size: 12px; padding: 4px 10px;" onclick="fillTodayDate()">ใส่วันที่วันนี้</button>
+            <button class="btn btn-lock" style="font-size: 12px; padding: 4px 10px;" onclick="clearDiagCell()">ล้างช่องนี้</button>
         </div>
         <div class="modal-actions">
             <button class="btn btn-view" onclick="closeDiagModal()">ยกเลิก</button>
@@ -779,7 +615,6 @@
 </div>
 
 <script>
-    // ==================== ค่าการเชื่อมต่อ Supabase & Master PIN ====================
     const SUPABASE_URL = "https://siiiifesdjuunwmwozfb.supabase.co";
     const SUPABASE_KEY = "sb_publishable_ohToE8Z_Fzo87uBtzdPDIg_cqHCi3HT";
     const MASTER_PIN = "112233";
@@ -787,8 +622,8 @@
     let isEditMode = false;
     let isHorizontalView = true;
     let activeDiagTarget = null;
+    let workItemsCodes = []; // เก็บรายการ work_code จากตาราง work_items
 
-    // โครงสร้างข้อมูล 19 แถวตามฟอร์มต้นฉบับ
     let stateF007 = Array.from({ length: 19 }, (_, i) => ({
         row_no: i + 1,
         doc_set_no: "",
@@ -813,9 +648,38 @@
         "r04_dist", "r04_ret"
     ];
 
-    // ==================== สร้างตารางทั้ง 19 แถว ====================
+    // โหลดรายชื่อ work_code จากตาราง work_items
+    async function fetchWorkItems() {
+        try {
+            const headers = {
+                "apikey": SUPABASE_KEY,
+                "Authorization": `Bearer ${SUPABASE_KEY}`
+            };
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/work_items?select=work_code&order=work_code.asc`, { headers });
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                    workItemsCodes = data.map(item => item.work_code).filter(Boolean);
+                    populateDatalist();
+                }
+            }
+        } catch (err) {
+            console.log("Could not load work_items:", err);
+        }
+    }
+
+    function populateDatalist() {
+        const datalist = document.getElementById("workItemsList");
+        datalist.innerHTML = "";
+        workItemsCodes.forEach(code => {
+            const opt = document.createElement("option");
+            opt.value = code;
+            datalist.appendChild(opt);
+        });
+    }
+
     function renderTables() {
-        // สร้างตาราง F-MO-007
+        // F-MO-007
         const tbody007 = document.getElementById("tbody_f007");
         tbody007.innerHTML = "";
         document.getElementById("f007_doc_no").value = stateF007[0]?.doc_set_no || "";
@@ -824,7 +688,7 @@
             const tr = document.createElement("tr");
             tr.innerHTML = `
                 <td>${row.row_no}</td>
-                <td><input type="text" class="cell-input" value="${escapeHtml(row.product_code)}" ${isEditMode ? "" : "readonly"} oninput="updateF007Text(${idx}, 'product_code', this.value)"></td>
+                <td><input type="text" class="cell-input" list="workItemsList" value="${escapeHtml(row.product_code)}" ${isEditMode ? "" : "readonly"} oninput="updateF007Text(${idx}, 'product_code', this.value)"></td>
                 <td><input type="text" class="cell-input center" value="${escapeHtml(row.drawing_doc_no)}" ${isEditMode ? "" : "readonly"} oninput="updateF007Text(${idx}, 'drawing_doc_no', this.value)"></td>
                 ${["rev_00","rev_01","rev_02","rev_03","rev_04","rev_05"].map(revKey => `
                     <td class="rev-check-cell" onclick="toggleRevCheck(${idx}, '${revKey}')">${row[revKey] ? "✓" : ""}</td>
@@ -833,7 +697,7 @@
             tbody007.appendChild(tr);
         });
 
-        // สร้างตาราง F-MO-008
+        // F-MO-008
         const tbody008 = document.getElementById("tbody_f008");
         tbody008.innerHTML = "";
         document.getElementById("f008_doc_no").value = stateF008[0]?.doc_set_no || "";
@@ -867,7 +731,6 @@
         return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
-    // ==================== การอัปเดตค่าในตาราง ====================
     function onF007MetaChange() {
         const val = document.getElementById("f007_doc_no").value;
         stateF007.forEach(r => r.doc_set_no = val);
@@ -901,7 +764,6 @@
         saveToLocalBackup();
     }
 
-    // ==================== จัดการ Modal ช่องเส้นประทแยงมุม (F-MO-008) ====================
     function openDiagModal(rowIdx, key) {
         if (!isEditMode) return;
         activeDiagTarget = { rowIdx, key };
@@ -943,7 +805,6 @@
         saveToLocalBackup();
     }
 
-    // ==================== สลับโหมดมุมมอง และ ปลดล็อกด้วย PIN ====================
     function toggleOrientationView() {
         isHorizontalView = !isHorizontalView;
         const btn = document.getElementById("btnToggleView");
@@ -989,7 +850,6 @@
         }
     }
 
-    // ==================== เชื่อมต่อฐานข้อมูล Supabase & Local Backup ====================
     function saveToLocalBackup() {
         localStorage.setItem("wi_mo_001_f007", JSON.stringify(stateF007));
         localStorage.setItem("wi_mo_001_f008", JSON.stringify(stateF008));
@@ -1006,6 +866,7 @@
         const badge = document.getElementById("dbStatusBadge");
         loadFromLocalBackup();
         renderTables();
+        await fetchWorkItems(); // ดึงรายการ work_code มาเตรียมไว้
 
         try {
             const headers = {
@@ -1017,7 +878,7 @@
                 fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_distribution?select=*&order=row_no.asc`, { headers })
             ]);
 
-            if (!res007.ok || !res008.ok) throw new Error("Table not initialized or network blocked");
+            if (!res007.ok || !res008.ok) throw new Error("Table error");
 
             const data007 = await res007.json();
             const data008 = await res008.json();
@@ -1041,7 +902,7 @@
             renderTables();
         } catch (err) {
             badge.className = "status-badge status-offline";
-            badge.innerText = "โหมดสำรองในเครื่อง (รอสร้างตาราง / ออฟไลน์)";
+            badge.innerText = "โหมดสำรองในเครื่อง (Offline)";
         }
     }
 
@@ -1060,16 +921,8 @@
             };
 
             const [res1, res2] = await Promise.all([
-                fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_master`, {
-                    method: "POST",
-                    headers,
-                    body: JSON.stringify(stateF007)
-                }),
-                fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_distribution`, {
-                    method: "POST",
-                    headers,
-                    body: JSON.stringify(stateF008)
-                })
+                fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_master`, { method: "POST", headers, body: JSON.stringify(stateF007) }),
+                fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_distribution`, { method: "POST", headers, body: JSON.stringify(stateF008) })
             ]);
 
             if (!res1.ok || !res2.ok) throw new Error("Save failed");
@@ -1079,13 +932,12 @@
             badge.innerText = "บันทึกขึ้น Supabase ล่าสุดเรียบร้อย";
             alert("บันทึกข้อมูลลงฐานข้อมูล Supabase สำเร็จ!");
         } catch (err) {
-            alert("บันทึกไว้ในเครื่องเรียบร้อยแล้ว (แต่ยังไม่สามารถส่งขึ้น Supabase ได้ กรุณาตรวจสอบว่าได้รันคำสั่ง SQL สร้างตารางหรือยัง)");
+            alert("บันทึกไว้ในเครื่องเรียบร้อยแล้ว (ไม่สามารถส่งขึ้น Supabase ได้)");
         } finally {
             btn.innerText = origText;
         }
     }
 
-    // เริ่มทำงานทันทีเมื่อเปิดหน้าเว็บ
     window.addEventListener("DOMContentLoaded", fetchFromSupabase);
 </script>
 
