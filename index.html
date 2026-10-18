@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>WI-MO-001 การควบคุม Drawing (ระบบออนไลน์ ISO 9001 + Storage Dropdown)</title>
+    <title>WI-MO-001 การควบคุม Drawing (ระบบออนไลน์ ISO 9001)</title>
     <style>
         @page {
             size: A4 portrait;
@@ -147,6 +147,7 @@
             * { transition: none !important; animation: none !important; }
             html, body, body.horizontal-view { background-color: #ffffff !important; margin: 0 !important; padding: 0 !important; }
             .toolbar, .section-control-bar, .modal-overlay, .no-print, .file-action-btns { display: none !important; }
+            input::placeholder { color: transparent !important; opacity: 0 !important; }
             .page, body.horizontal-view .page.landscape-form-page {
                 width: 210mm !important;
                 height: 297mm !important;
@@ -214,7 +215,7 @@
         body.edit-mode .cell-input:not([readonly]), body.edit-mode .inline-input:not([readonly]) { background-color: rgba(14, 165, 233, 0.08); }
         body.edit-mode .cell-input:focus, body.edit-mode .inline-input:focus { background-color: rgba(250, 204, 21, 0.25); }
 
-        /* ปุ่มจัดการไฟล์ PDF และใบแจกจ่าย */
+        /* ปุ่มจัดการไฟล์ PDF และใบแจกจ่าย (ซ่อนเวลาพิมพ์อัตโนมัติ) */
         .file-action-btns { position: absolute; right: 2px; top: 2px; display: flex; gap: 2px; z-index: 2; }
         .action-mini-btn {
             background: #0284c7; color: #fff; border: none; border-radius: 3px; font-size: 8.5px; font-family: Tahoma, sans-serif; padding: 2px 5px; cursor: pointer; opacity: 0.92; text-decoration: none;
@@ -254,7 +255,7 @@
 <!-- แถบควบคุมระบบออนไลน์ -->
 <div class="toolbar">
     <div class="toolbar-left">
-        <div><b>ระบบควบคุมเอกสาร ISO ออนไลน์ : WI-MO-001 (Smart Storage Dropdown)</b></div>
+        <div><b>ระบบควบคุมเอกสาร ISO ออนไลน์ : WI-MO-001</b></div>
         <span id="dbStatusBadge" class="status-badge status-connecting">กำลังเชื่อมต่อฐานข้อมูล...</span>
     </div>
     <div class="toolbar-right">
@@ -408,7 +409,7 @@
 
 <div id="f008_pages_container"></div>
 
-<!-- Datalist สำหรับรหัสสินค้า (รวมจาก work_items + ชื่อไฟล์ใน design) และ ไฟล์ PDF ใน Storage -->
+<!-- Datalist สำหรับรหัสสินค้า และ ไฟล์ PDF ใน Storage -->
 <datalist id="workItemsList"></datalist>
 <datalist id="storageFilesList"></datalist>
 
@@ -419,8 +420,8 @@
 <div id="diagModal" class="modal-overlay">
     <div class="modal-box">
         <h3 id="diagModalTitle">บันทึกการแจกจ่าย / เรียกคืน Drawing</h3>
-        <div class="modal-field"><label>ชื่อผู้เซ็นรับ / ผู้คืน:</label><input type="text" id="modalSignInput" placeholder="เช่น ไพบูลย์, สมชาย..."></div>
-        <div class="modal-field"><label>วันที่ (วว/ดด/ปป):</label><input type="text" id="modalDateInput" placeholder="เช่น 18/10/69"></div>
+        <div class="modal-field"><label>ชื่อผู้เซ็นรับ / ผู้คืน:</label><input type="text" id="modalSignInput"></div>
+        <div class="modal-field"><label>วันที่ (วว/ดด/ปป):</label><input type="text" id="modalDateInput"></div>
         <div style="margin-bottom: 10px;">
             <button class="btn btn-view" style="font-size: 12px; padding: 4px 10px;" onclick="fillTodayDate()">ใส่วันที่วันนี้</button>
             <button class="btn btn-lock" style="font-size: 12px; padding: 4px 10px;" onclick="clearDiagCell()">ล้างช่องนี้</button>
@@ -436,7 +437,7 @@
     const SUPABASE_URL = "https://siiiifesdjuunwmwozfb.supabase.co";
     const SUPABASE_KEY = "sb_publishable_ohToE8Z_Fzo87uBtzdPDIg_cqHCi3HT";
     const STORAGE_BUCKET = "drawing-files";
-    const STORAGE_FOLDER = "design"; // โฟลเดอร์ที่เก็บไฟล์ PDF
+    const STORAGE_FOLDER = "design";
     const MASTER_PIN = "112233";
     const ROWS_PER_SHEET = 19;
 
@@ -445,7 +446,7 @@
     let activeDiagTarget = null;
     let activeUploadRowIdx = null;
     let workItemsCodes = [];
-    let storageFilesMap = {}; // เก็บ { "320-77 (2).pdf": "design/320-77 (2).pdf" }
+    let storageFilesMap = {};
     let selectedProductCodeForF008 = "";
 
     let stateF007 = Array.from({ length: ROWS_PER_SHEET }, (_, i) => createEmptyF007Row(i + 1));
@@ -467,7 +468,6 @@
         };
     }
 
-    // สร้าง Public URL ที่รองรับชื่อไฟล์ที่มีเว้นวรรคหรือวงเล็บ เช่น 320-77 (2).pdf
     function buildStoragePublicUrl(fullPath) {
         const encodedPath = fullPath.split("/").map(seg => encodeURIComponent(seg)).join("/");
         return `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${encodedPath}`;
@@ -475,11 +475,10 @@
 
     function syncF008WithF007() {
         const activeProducts = getActiveDrawingRows();
-        activeProducts.forEach((r, idx) => {
+        activeProducts.forEach((r) => {
             const code = r.product_code.trim();
             if (!stateF008Map[code]) {
-                const defaultNo = r.drawing_doc_no || String(idx + 1).padStart(3, "0");
-                stateF008Map[code] = createEmptyF008Sheet(code, defaultNo);
+                stateF008Map[code] = createEmptyF008Sheet(code, r.drawing_doc_no || "");
             }
         });
         if (activeProducts.length > 0) {
@@ -502,7 +501,6 @@
         return result;
     }
 
-    // ดึงรายชื่อไฟล์จากทั้งโฟลเดอร์ design และหน้าแรกของ Bucket drawing-files
     async function fetchStorageFiles() {
         storageFilesMap = {};
         try {
@@ -540,7 +538,6 @@
                 const rootFiles = await resRoot.json();
                 if (Array.isArray(rootFiles)) {
                     rootFiles.forEach(item => {
-                        // ข้ามโฟลเดอร์ย่อย เอาเฉพาะไฟล์ที่มีนามสกุล
                         if (item.name && item.id && item.name !== ".emptyFolderPlaceholder" && !storageFilesMap[item.name]) {
                             storageFilesMap[item.name] = item.name;
                         }
@@ -558,7 +555,6 @@
         const storageNames = Object.keys(storageFilesMap).sort((a, b) => a.localeCompare(b));
         document.getElementById("storageCountLabel").innerText = `พบไฟล์ PDF ${storageNames.length} รายการ`;
 
-        // 1. ใส่รายชื่อไฟล์ในช่อง "เลขที่เอกสาร" (แสดงทั้งชื่อไฟล์และตัด .pdf ออกให้เลือกได้สะดวก)
         const storageDatalist = document.getElementById("storageFilesList");
         storageDatalist.innerHTML = "";
         storageNames.forEach(fileName => {
@@ -567,7 +563,6 @@
             storageDatalist.appendChild(opt);
         });
 
-        // 2. รวมรหัสจากตาราง work_items และชื่อไฟล์จากโฟลเดอร์ design (ตัด .pdf ออก) ไว้ในช่อง "รหัสสินค้า" ด้วย
         const combinedProductCodes = new Set(workItemsCodes);
         storageNames.forEach(fileName => {
             const cleanCode = fileName.replace(/\.pdf$/i, "").trim();
@@ -638,13 +633,13 @@
                     <tr>
                         <td>${row.row_no}</td>
                         <td>
-                            <input type="text" class="cell-input" list="workItemsList" placeholder="${isEditMode ? 'พิมพ์หรือเลือกรหัสชิ้นงาน...' : ''}" value="${escapeHtml(row.product_code)}" ${isEditMode ? "" : "readonly"} onchange="updateF007Product(${globalIdx}, this.value)" oninput="updateF007TextOnly(${globalIdx}, 'product_code', this.value)">
+                            <input type="text" class="cell-input" list="workItemsList" value="${escapeHtml(row.product_code)}" ${isEditMode ? "" : "readonly"} onchange="updateF007Product(${globalIdx}, this.value)" oninput="updateF007TextOnly(${globalIdx}, 'product_code', this.value)">
                             <div class="file-action-btns">
                                 ${hasCode ? `<button class="action-mini-btn no-print" onclick="jumpToF008('${escapeJs(row.product_code.trim())}')">ใบแจกจ่าย</button>` : ""}
                             </div>
                         </td>
                         <td>
-                            <input type="text" class="cell-input center" list="storageFilesList" placeholder="${isEditMode && hasCode ? 'เลือกไฟล์ PDF...' : ''}" value="${escapeHtml(row.drawing_doc_no)}" ${isEditMode ? "" : "readonly"} onchange="updateF007DocNoAndUrl(${globalIdx}, this.value)" oninput="updateF007TextOnly(${globalIdx}, 'drawing_doc_no', this.value)">
+                            <input type="text" class="cell-input center" list="storageFilesList" value="${escapeHtml(row.drawing_doc_no)}" ${isEditMode ? "" : "readonly"} onchange="updateF007DocNoAndUrl(${globalIdx}, this.value)" oninput="updateF007TextOnly(${globalIdx}, 'drawing_doc_no', this.value)">
                             <div class="file-action-btns">
                                 ${hasPdf ? `<a href="${row.pdf_url}" target="_blank" class="action-mini-btn pdf-btn" title="คลิกเพื่อเปิดดู/พิมพ์ไฟล์ PDF Drawing">เปิด PDF</a>` : ""}
                                 ${isEditMode && hasCode ? `<button class="action-mini-btn" title="อัปโหลดไฟล์ PDF ใหม่เข้าโฟลเดอร์ design" onclick="triggerPdfUpload(${globalIdx})">อัปโหลด</button>` : ""}
@@ -745,7 +740,7 @@
                         <div class="form-outer-frame">
                             <div class="form-sub-header">
                                 <div>รหัสสินค้า <input type="text" class="inline-input" style="width: 240px; font-weight: bold;" value="${escapeHtml(prodCode === '__EMPTY__' ? '' : prodCode)}" readonly></div>
-                                <div>แผ่นที่ ${idx + 1} / ${listToRender.length}</div>
+                                <div></div>
                             </div>
                             <table class="form-grid">
                                 <thead>
@@ -771,23 +766,17 @@
     function escapeHtml(str) { return !str ? "" : String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
     function escapeJs(str) { return !str ? "" : String(str).replace(/\\/g, "\\\\").replace(/'/g, "\\'"); }
 
-    // เมื่อเลือกรหัสสินค้า หากตรงกับชื่อไฟล์ในโฟลเดอร์ design ให้ผูกลิงก์ PDF อัตโนมัติทันที
+    // เมื่อเลือกรหัสสินค้า: ไม่รันเลขที่เอกสารอัตโนมัติ (ปล่อยว่างให้ผู้ใช้พิมพ์เอง) แต่ถ้าชื่อตรงกับไฟล์ใน design จะผูกลิงก์ PDF ให้พร้อมเปิดดู
     function updateF007Product(idx, val) {
         const code = val.trim();
         stateF007[idx].product_code = code;
 
-        // ตรวจสอบว่ามีไฟล์ชื่อตรงกับรหัสสินค้าหรือไม่
         const matchingFile = Object.keys(storageFilesMap).find(
             fName => fName.toLowerCase() === code.toLowerCase() || fName.replace(/\.pdf$/i, "").toLowerCase() === code.toLowerCase()
         );
 
         if (matchingFile) {
-            if (!stateF007[idx].drawing_doc_no) {
-                stateF007[idx].drawing_doc_no = String(idx + 1).padStart(3, "0");
-            }
             stateF007[idx].pdf_url = buildStoragePublicUrl(storageFilesMap[matchingFile]);
-        } else if (code && !stateF007[idx].drawing_doc_no) {
-            stateF007[idx].drawing_doc_no = String(idx + 1).padStart(3, "0");
         }
 
         selectedProductCodeForF008 = code;
@@ -795,7 +784,7 @@
         renderAll();
     }
 
-    // เมื่อเลือกไฟล์จากช่องเลขที่เอกสาร ให้ผูกลิงก์ PDF จากโฟลเดอร์ design ทันที
+    // เมื่อพิมพ์หรือเลือกช่องเลขที่เอกสาร: ผู้ใช้พิมพ์เลขเองได้อย่างอิสระ หากตรงกับชื่อไฟล์จะผูกลิงก์ให้ด้วย
     function updateF007DocNoAndUrl(idx, val) {
         const trimmed = val.trim();
         stateF007[idx].drawing_doc_no = trimmed;
@@ -839,9 +828,7 @@
             });
             if (!res.ok) throw new Error("Upload failed");
 
-            if (!row.drawing_doc_no) {
-                row.drawing_doc_no = String(activeUploadRowIdx + 1).padStart(3, "0");
-            }
+            // ผูกเฉพาะลิงก์ PDF โดยไม่ทับหรือรันเลขที่เอกสารอัตโนมัติ
             row.pdf_url = buildStoragePublicUrl(uploadPath);
 
             saveToLocalBackup();
@@ -924,12 +911,12 @@
     }
 
     function saveToLocalBackup() {
-        localStorage.setItem("wi_mo_001_f007_v5", JSON.stringify(stateF007));
-        localStorage.setItem("wi_mo_001_f008_v5", JSON.stringify(stateF008Map));
+        localStorage.setItem("wi_mo_001_f007_v6", JSON.stringify(stateF007));
+        localStorage.setItem("wi_mo_001_f008_v6", JSON.stringify(stateF008Map));
     }
     function loadFromLocalBackup() {
-        const l007 = localStorage.getItem("wi_mo_001_f007_v5");
-        const l008 = localStorage.getItem("wi_mo_001_f008_v5");
+        const l007 = localStorage.getItem("wi_mo_001_f007_v6");
+        const l008 = localStorage.getItem("wi_mo_001_f008_v6");
         if (l007) stateF007 = JSON.parse(l007);
         if (l008) stateF008Map = JSON.parse(l008);
     }
