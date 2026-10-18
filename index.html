@@ -30,7 +30,7 @@
             z-index: 999;
             background: #1e293b;
             color: #fff;
-            padding: 10px 20px;
+            padding: 10px 18px;
             display: flex;
             flex-wrap: wrap;
             justify-content: space-between;
@@ -41,13 +41,7 @@
             box-shadow: 0 3px 10px rgba(0,0,0,0.5);
             border-bottom: 2px solid #0ea5e9;
         }
-        .toolbar-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        .toolbar-right {
+        .toolbar-left, .toolbar-right {
             display: flex;
             align-items: center;
             gap: 8px;
@@ -58,9 +52,6 @@
             border-radius: 20px;
             font-weight: bold;
             font-size: 12px;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
         }
         .status-online { background: #065f46; color: #6ee7b7; border: 1px solid #10b981; }
         .status-offline { background: #78350f; color: #fde68a; border: 1px solid #f59e0b; }
@@ -68,13 +59,12 @@
 
         .btn {
             border: none;
-            padding: 7px 14px;
+            padding: 7px 12px;
             border-radius: 5px;
-            font-size: 13px;
+            font-size: 12.5px;
             cursor: pointer;
             font-weight: bold;
             font-family: Tahoma, sans-serif;
-            transition: 0.15s;
             display: inline-flex;
             align-items: center;
             gap: 5px;
@@ -88,6 +78,37 @@
         .btn-save:hover { background: #1d4ed8; }
         .btn-print { background: #0f766e; color: #fff; }
         .btn-print:hover { background: #115e59; }
+        .btn-add-sheet { background: #7c3aed; color: #fff; }
+        .btn-add-sheet:hover { background: #6d28d9; }
+
+        /* แถบควบคุมย่อยเหนือแผ่นงาน (ซ่อนเวลาพิมพ์) */
+        .section-control-bar {
+            width: 297mm;
+            max-width: 96vw;
+            margin: 18px auto -6px auto;
+            background: #0f172a;
+            color: #f8fafc;
+            padding: 8px 16px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-family: Tahoma, sans-serif;
+            font-size: 13px;
+            border-left: 4px solid #38bdf8;
+        }
+        .section-control-bar select {
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid #475569;
+            background: #1e293b;
+            color: #fff;
+            font-family: Tahoma, sans-serif;
+            font-size: 13px;
+            font-weight: bold;
+        }
 
         /* ==================== โครงสร้างหน้ากระดาษ A4 ==================== */
         .page {
@@ -99,13 +120,15 @@
             box-shadow: 0 0 12px rgba(0,0,0,0.6);
             position: relative;
             page-break-after: always;
+            break-after: page;
             overflow: hidden;
-            transition: all 0.25s ease;
         }
         .page:last-child {
             page-break-after: avoid;
+            break-after: auto;
         }
 
+        /* โหมดแนวนอนอ่านง่ายบนหน้าจอ */
         body.horizontal-view .page.landscape-form-page {
             width: 297mm;
             height: 210mm;
@@ -120,11 +143,23 @@
             transform: none !important;
         }
 
+        /* ซ่อนแผ่น F-MO-008 อื่นๆ บนหน้าจอเมื่อไม่ได้เลือก (แต่เปิดแสดงตอนสั่งพิมพ์ทั้งหมดได้) */
+        .page.f008-sheet.hidden-on-screen {
+            display: none;
+        }
+
+        /* ==================== แก้ไขปัญหาตารางซ้อนกันเวลาสั่งพิมพ์ 100% ==================== */
         @media print {
-            body, body.horizontal-view {
-                background-color: #ffffff;
+            * {
+                transition: none !important;
+                animation: none !important;
             }
-            .toolbar, .modal-overlay {
+            html, body, body.horizontal-view {
+                background-color: #ffffff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .toolbar, .section-control-bar, .modal-overlay, .no-print {
                 display: none !important;
             }
             .page, body.horizontal-view .page.landscape-form-page {
@@ -133,14 +168,40 @@
                 padding: 15mm 18mm !important;
                 margin: 0 !important;
                 box-shadow: none !important;
+                page-break-after: always !important;
+                break-after: page !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                overflow: hidden !important;
             }
-            body.horizontal-view .page.landscape-form-page .rotated-canvas {
+            /* หากเลือกโหมดพิมพ์ใบแจกจ่ายทั้งหมด ให้แสดงทุกแผ่น */
+            body.print-all-f008 .page.f008-sheet.hidden-on-screen {
+                display: block !important;
+            }
+            .rotated-sheet-wrapper {
+                width: 100% !important;
+                height: 100% !important;
+                position: relative !important;
+            }
+            .rotated-canvas, body.horizontal-view .page.landscape-form-page .rotated-canvas {
                 position: absolute !important;
                 width: 265mm !important;
                 height: 175mm !important;
                 top: 50% !important;
                 left: 50% !important;
                 transform: translate(-50%, -50%) rotate(-90deg) !important;
+            }
+            /* ป้องกันเบราว์เซอร์สั่งซ้ำ thead ตอนหมุนตาราง ซึ่งเป็นต้นเหตุให้ตารางซ้อนกัน */
+            table.form-grid thead {
+                display: table-row-group !important;
+            }
+            table.form-grid tr, table.form-grid td, table.form-grid th {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            .diag-sign { color: #000 !important; }
+            body.edit-mode .cell-input, body.edit-mode .inline-input {
+                background: transparent !important;
             }
         }
 
@@ -221,7 +282,7 @@
         .sec-sub { margin-left: 32px; margin-bottom: 6px; }
         .sec-sub-sub { margin-left: 64px; margin-bottom: 8px; text-align: left; }
 
-        /* ==================== หน้า 3 และ หน้า 4 (แบบฟอร์ม) ==================== */
+        /* ==================== หน้า 3+ และ หน้า 4+ (แบบฟอร์ม) ==================== */
         .rotated-sheet-wrapper { width: 100%; height: 100%; position: relative; }
         .rotated-canvas {
             position: absolute;
@@ -238,7 +299,8 @@
         .form-main-title { font-size: 18pt; font-weight: bold; text-align: center; flex: 1; }
         .form-outer-frame { border: 1px solid #000; padding: 8px 10px; flex: 1; display: flex; flex-direction: column; position: relative; }
         .form-sub-header { display: flex; justify-content: space-between; font-size: 14pt; margin-bottom: 4px; }
-        table.form-grid { width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 13pt; flex: 1; }
+        table.form-grid { width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 13pt; flex: 1; table-layout: fixed; }
+        table.form-grid thead { display: table-row-group; }
         table.form-grid th, table.form-grid td {
             border: 1px solid #000;
             text-align: center;
@@ -246,6 +308,7 @@
             height: 21px;
             line-height: 1.05;
             position: relative;
+            overflow: hidden;
         }
         table.form-grid th { font-weight: bold; background-color: #fff; }
 
@@ -281,6 +344,23 @@
             background-color: rgba(250, 204, 21, 0.25);
         }
 
+        /* ปุ่มลัดเปิดใบแจกจ่ายของแต่ละบรรทัดใน F-MO-007 */
+        .open-dist-btn {
+            position: absolute;
+            right: 2px;
+            top: 2px;
+            background: #0284c7;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            font-size: 9px;
+            font-family: Tahoma, sans-serif;
+            padding: 2px 5px;
+            cursor: pointer;
+            opacity: 0.85;
+        }
+        .open-dist-btn:hover { opacity: 1; background: #0369a1; }
+
         .rev-check-cell { cursor: default; font-weight: bold; font-size: 14pt; user-select: none; }
         body.edit-mode .rev-check-cell { cursor: pointer; }
         body.edit-mode .rev-check-cell:hover { background-color: rgba(16, 185, 129, 0.15); }
@@ -297,11 +377,6 @@
         .diag-wrap { width: 100%; height: 20px; position: relative; font-size: 9.5pt; line-height: 1; }
         .diag-sign { position: absolute; top: 1px; left: 2px; font-weight: bold; color: #003399; max-width: 70%; overflow: hidden; white-space: nowrap; }
         .diag-date { position: absolute; bottom: 1px; right: 2px; color: #333; font-size: 8.5pt; white-space: nowrap; }
-
-        @media print {
-            .diag-sign { color: #000; }
-            body.edit-mode .cell-input, body.edit-mode .inline-input { background: transparent !important; }
-        }
 
         .form-code-bottom { text-align: left; font-size: 12pt; margin-top: 3px; font-family: Arial, sans-serif; }
 
@@ -336,8 +411,11 @@
         <button id="btnSaveCloud" class="btn btn-save" onclick="saveAllToSupabase()">
             บันทึกข้อมูลลงฐานข้อมูล
         </button>
-        <button class="btn btn-print" onclick="window.print()">
-            พิมพ์ / บันทึกเป็น PDF (Ctrl+P)
+        <button class="btn btn-print" onclick="printCurrentSelection()">
+            พิมพ์หน้าปัจจุบัน (Ctrl+P)
+        </button>
+        <button class="btn btn-add-sheet" onclick="printAllDocuments()">
+            พิมพ์ครบทุกแผ่น (รวมใบแจกจ่ายทุก Drawing)
         </button>
     </div>
 </div>
@@ -497,96 +575,36 @@
     </div>
 </div>
 
-<!-- ==================== หน้าที่ 3 : บัญชีรายชื่อ Drawing (F-MO-007-00) ==================== -->
-<div class="page landscape-form-page">
-    <div class="rotated-sheet-wrapper">
-        <div class="rotated-canvas">
-            <div class="form-top-bar">
-                <div style="width: 180px;"></div>
-                <div class="form-main-title">บัญชีรายชื่อ Drawing</div>
-                <div style="width: 180px; text-align: right; font-size: 15pt;">
-                    เลขที่ <input type="text" id="f007_doc_no" class="inline-input" readonly oninput="onF007MetaChange()">
-                </div>
-            </div>
-            <div class="form-outer-frame">
-                <div class="form-sub-header">
-                    <div>ประเภทเอกสาร : Drawing</div>
-                    <div></div>
-                </div>
-                <table class="form-grid">
-                    <thead>
-                        <tr>
-                            <th rowspan="2" style="width: 7%;">ลำดับที่</th>
-                            <th rowspan="2" style="width: 33%;">รหัสสินค้า</th>
-                            <th rowspan="2" style="width: 18%;">เลขที่เอกสาร</th>
-                            <th colspan="6" style="width: 42%;">แก้ไขครั้งที่</th>
-                        </tr>
-                        <tr>
-                            <th style="width: 7%;">00</th>
-                            <th style="width: 7%;">01</th>
-                            <th style="width: 7%;">02</th>
-                            <th style="width: 7%;">03</th>
-                            <th style="width: 7%;">04</th>
-                            <th style="width: 7%;">05</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody_f007"></tbody>
-                </table>
-            </div>
-            <div class="form-code-bottom">F-MO-007-00</div>
-        </div>
+<!-- ==================== ส่วนควบคุมแผ่นงาน F-MO-007 (รองรับหลายแผ่น) ==================== -->
+<div class="section-control-bar">
+    <div>
+        <b>ส่วนที่ 1: บัญชีรายชื่อ Drawing (F-MO-007-00)</b> — มี Drawing กี่บรรทัด ระบบจะสร้างใบแจกจ่าย F-MO-008 แยกตามรหัสสินค้าให้อัตโนมัติ
+    </div>
+    <div>
+        <button class="btn btn-add-sheet" onclick="addNewF007Sheet()">
+            + เพิ่มแผ่นบัญชี Drawing (แผ่นที่ <span id="nextSheetNumLabel">2</span>)
+        </button>
     </div>
 </div>
 
-<!-- ==================== หน้าที่ 4 : ใบแจกจ่าย Drawing (สำเนาควบคุม) (F-MO-008-00) ==================== -->
-<div class="page landscape-form-page">
-    <div class="rotated-sheet-wrapper">
-        <div class="rotated-canvas">
-            <div class="form-top-bar">
-                <div style="width: 180px;"></div>
-                <div class="form-main-title">ใบแจกจ่าย Drawing (สำเนาควบคุม)</div>
-                <div style="width: 180px; text-align: right; font-size: 15pt;">
-                    เลขที่ <input type="text" id="f008_doc_no" class="inline-input" readonly oninput="onF008MetaChange()">
-                </div>
-            </div>
-            <div class="form-outer-frame">
-                <div class="form-sub-header">
-                    <div>
-                        รหัสสินค้า <input type="text" id="f008_product_code" class="inline-input" style="width: 220px;" list="workItemsList" readonly oninput="onF008MetaChange()">
-                    </div>
-                    <div></div>
-                </div>
-                <table class="form-grid">
-                    <thead>
-                        <tr>
-                            <th rowspan="2" style="width: 6%;">ลำดับที่</th>
-                            <th rowspan="2" style="width: 24%;">กลุ่มงานที่ใช้</th>
-                            <th colspan="2" style="width: 14%;">ออกฉบับใหม่ ครั้งที่ 00</th>
-                            <th colspan="2" style="width: 14%;">แก้ไขครั้งที่ 01</th>
-                            <th colspan="2" style="width: 14%;">แก้ไขครั้งที่ 02</th>
-                            <th colspan="2" style="width: 14%;">แก้ไขครั้งที่ 03</th>
-                            <th colspan="2" style="width: 14%;">แก้ไขครั้งที่ 04</th>
-                        </tr>
-                        <tr>
-                            <th style="width: 7%;">แจกจ่าย</th>
-                            <th style="width: 7%;">เรียกคืน</th>
-                            <th style="width: 7%;">แจกจ่าย</th>
-                            <th style="width: 7%;">เรียกคืน</th>
-                            <th style="width: 7%;">แจกจ่าย</th>
-                            <th style="width: 7%;">เรียกคืน</th>
-                            <th style="width: 7%;">แจกจ่าย</th>
-                            <th style="width: 7%;">เรียกคืน</th>
-                            <th style="width: 7%;">แจกจ่าย</th>
-                            <th style="width: 7%;">เรียกคืน</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody_f008"></tbody>
-                </table>
-            </div>
-            <div class="form-code-bottom">F-MO-008-00</div>
-        </div>
+<!-- พื้นที่แสดงหน้า F-MO-007 (แผ่นที่ 1, 2, 3...) -->
+<div id="f007_pages_container"></div>
+
+<!-- ==================== ส่วนควบคุมแผ่นงาน F-MO-008 (1 Drawing = 1 แผ่น) ==================== -->
+<div class="section-control-bar" id="f008_control_bar">
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <b>ส่วนที่ 2: ใบแจกจ่าย Drawing (F-MO-008-00)</b>
+        <span>เลือกดู/กรอกข้อมูลของรหัสสินค้า:</span>
+        <select id="f008ProductSelector" onchange="selectF008Sheet(this.value)"></select>
+        <span id="f008CountBadge" style="color: #38bdf8; font-weight: bold;"></span>
+    </div>
+    <div>
+        <span style="font-size: 12px; color: #94a3b8;">*ทุกบรรทัดที่มีรหัสสินค้าใน F-MO-007 จะมีใบแจกจ่าย 1 แผ่นทันที</span>
     </div>
 </div>
+
+<!-- พื้นที่แสดงหน้า F-MO-008 (สร้างอัตโนมัติตามจำนวน Drawing ใน F-MO-007) -->
+<div id="f008_pages_container"></div>
 
 <!-- Datalist สำหรับ Smart Dropdown ดึง work_code จาก work_items -->
 <datalist id="workItemsList"></datalist>
@@ -618,27 +636,19 @@
     const SUPABASE_URL = "https://siiiifesdjuunwmwozfb.supabase.co";
     const SUPABASE_KEY = "sb_publishable_ohToE8Z_Fzo87uBtzdPDIg_cqHCi3HT";
     const MASTER_PIN = "112233";
+    const ROWS_PER_SHEET = 19;
 
     let isEditMode = false;
     let isHorizontalView = true;
     let activeDiagTarget = null;
-    let workItemsCodes = []; // เก็บรายการ work_code จากตาราง work_items
+    let workItemsCodes = [];
+    let selectedProductCodeForF008 = "";
 
-    let stateF007 = Array.from({ length: 19 }, (_, i) => ({
-        row_no: i + 1,
-        doc_set_no: "",
-        product_code: "",
-        drawing_doc_no: "",
-        rev_00: false, rev_01: false, rev_02: false, rev_03: false, rev_04: false, rev_05: false
-    }));
+    // ข้อมูล F-MO-007 (เริ่มต้น 19 แถว = 1 แผ่น และกดเพิ่มเป็น 38, 57 แถวได้)
+    let stateF007 = Array.from({ length: ROWS_PER_SHEET }, (_, i) => createEmptyF007Row(i + 1));
 
-    let stateF008 = Array.from({ length: 19 }, (_, i) => ({
-        row_no: i + 1,
-        doc_set_no: "",
-        product_code: "",
-        department_name: "",
-        cells_data: {}
-    }));
+    // ข้อมูล F-MO-008 เก็บแยกตามรหัสสินค้า: { "ARO 006": { product_code: "ARO 006", doc_set_no: "001", rows_data: [19 แถว] } }
+    let stateF008Map = {};
 
     const diagKeys = [
         "r00_dist", "r00_ret",
@@ -647,6 +657,62 @@
         "r03_dist", "r03_ret",
         "r04_dist", "r04_ret"
     ];
+
+    function createEmptyF007Row(rowNo) {
+        return {
+            row_no: rowNo,
+            doc_set_no: "",
+            product_code: "",
+            drawing_doc_no: "",
+            rev_00: false, rev_01: false, rev_02: false, rev_03: false, rev_04: false, rev_05: false
+        };
+    }
+
+    function createEmptyF008Sheet(productCode, defaultDocNo = "") {
+        return {
+            product_code: productCode,
+            doc_set_no: defaultDocNo,
+            rows_data: Array.from({ length: ROWS_PER_SHEET }, (_, i) => ({
+                row_no: i + 1,
+                department_name: "",
+                cells_data: {}
+            }))
+        };
+    }
+
+    // ตรวจสอบว่าทุกบรรทัดที่มีรหัสสินค้าใน F-MO-007 จะต้องมีแผ่น F-MO-008 ทันที
+    function syncF008WithF007() {
+        const activeProducts = getActiveDrawingRows();
+        activeProducts.forEach((r, idx) => {
+            const code = r.product_code.trim();
+            if (!stateF008Map[code]) {
+                const defaultNo = r.drawing_doc_no || String(idx + 1).padStart(3, "0");
+                stateF008Map[code] = createEmptyF008Sheet(code, defaultNo);
+            }
+        });
+
+        if (activeProducts.length > 0) {
+            const codes = activeProducts.map(r => r.product_code.trim());
+            if (!selectedProductCodeForF008 || !codes.includes(selectedProductCodeForF008)) {
+                selectedProductCodeForF008 = codes[0];
+            }
+        } else {
+            selectedProductCodeForF008 = "";
+        }
+    }
+
+    function getActiveDrawingRows() {
+        const seen = new Set();
+        const result = [];
+        stateF007.forEach(r => {
+            const code = (r.product_code || "").trim();
+            if (code && !seen.has(code)) {
+                seen.add(code);
+                result.push(r);
+            }
+        });
+        return result;
+    }
 
     // โหลดรายชื่อ work_code จากตาราง work_items
     async function fetchWorkItems() {
@@ -678,51 +744,212 @@
         });
     }
 
-    function renderTables() {
-        // F-MO-007
-        const tbody007 = document.getElementById("tbody_f007");
-        tbody007.innerHTML = "";
-        document.getElementById("f007_doc_no").value = stateF007[0]?.doc_set_no || "";
+    // ==================== เพิ่มแผ่น F-MO-007 แผ่นที่ 2, 3... ====================
+    function addNewF007Sheet() {
+        const currentLen = stateF007.length;
+        const firstDocNo = stateF007[0]?.doc_set_no || "";
+        for (let i = 1; i <= ROWS_PER_SHEET; i++) {
+            const newRow = createEmptyF007Row(currentLen + i);
+            newRow.doc_set_no = firstDocNo;
+            stateF007.push(newRow);
+        }
+        saveToLocalBackup();
+        renderAll();
+    }
 
-        stateF007.forEach((row, idx) => {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${row.row_no}</td>
-                <td><input type="text" class="cell-input" list="workItemsList" value="${escapeHtml(row.product_code)}" ${isEditMode ? "" : "readonly"} oninput="updateF007Text(${idx}, 'product_code', this.value)"></td>
-                <td><input type="text" class="cell-input center" value="${escapeHtml(row.drawing_doc_no)}" ${isEditMode ? "" : "readonly"} oninput="updateF007Text(${idx}, 'drawing_doc_no', this.value)"></td>
-                ${["rev_00","rev_01","rev_02","rev_03","rev_04","rev_05"].map(revKey => `
-                    <td class="rev-check-cell" onclick="toggleRevCheck(${idx}, '${revKey}')">${row[revKey] ? "✓" : ""}</td>
-                `).join("")}
-            `;
-            tbody007.appendChild(tr);
-        });
+    // ==================== สร้างหน้ากระดาษทั้งหมด ====================
+    function renderAll() {
+        syncF008WithF007();
+        renderF007Pages();
+        renderF008Pages();
+    }
 
-        // F-MO-008
-        const tbody008 = document.getElementById("tbody_f008");
-        tbody008.innerHTML = "";
-        document.getElementById("f008_doc_no").value = stateF008[0]?.doc_set_no || "";
-        document.getElementById("f008_product_code").value = stateF008[0]?.product_code || "";
+    function renderF007Pages() {
+        const container = document.getElementById("f007_pages_container");
+        container.innerHTML = "";
 
-        stateF008.forEach((row, idx) => {
-            const tr = document.createElement("tr");
-            const diagHtml = diagKeys.map(k => {
-                const cellObj = (row.cells_data && row.cells_data[k]) ? row.cells_data[k] : { sign: "", date: "" };
+        const totalSheets = Math.max(1, Math.ceil(stateF007.length / ROWS_PER_SHEET));
+        document.getElementById("nextSheetNumLabel").innerText = totalSheets + 1;
+
+        for (let sheetIdx = 0; sheetIdx < totalSheets; sheetIdx++) {
+            const startIdx = sheetIdx * ROWS_PER_SHEET;
+            const sheetRows = stateF007.slice(startIdx, startIdx + ROWS_PER_SHEET);
+            const sheetDocNo = sheetRows[0]?.doc_set_no || "";
+
+            const pageDiv = document.createElement("div");
+            pageDiv.className = "page landscape-form-page";
+
+            const rowsHtml = sheetRows.map((row, rOffset) => {
+                const globalIdx = startIdx + rOffset;
+                const hasCode = (row.product_code || "").trim().length > 0;
                 return `
-                    <td class="diag-cell" onclick="openDiagModal(${idx}, '${k}')">
-                        <div class="diag-wrap">
-                            <span class="diag-sign">${escapeHtml(cellObj.sign || "")}</span>
-                            <span class="diag-date">${escapeHtml(cellObj.date || "")}</span>
-                        </div>
-                    </td>
+                    <tr>
+                        <td>${row.row_no}</td>
+                        <td>
+                            <input type="text" class="cell-input" list="workItemsList" value="${escapeHtml(row.product_code)}" ${isEditMode ? "" : "readonly"} onchange="updateF007Product(${globalIdx}, this.value)" oninput="updateF007TextOnly(${globalIdx}, 'product_code', this.value)">
+                            ${hasCode ? `<button class="open-dist-btn no-print" title="คลิกเพื่อเปิดใบแจกจ่ายของรหัสนี้" onclick="jumpToF008('${escapeJs(row.product_code.trim())}')">ใบแจกจ่าย</button>` : ""}
+                        </td>
+                        <td><input type="text" class="cell-input center" value="${escapeHtml(row.drawing_doc_no)}" ${isEditMode ? "" : "readonly"} oninput="updateF007DocNo(${globalIdx}, this.value)"></td>
+                        ${["rev_00","rev_01","rev_02","rev_03","rev_04","rev_05"].map(revKey => `
+                            <td class="rev-check-cell" onclick="toggleRevCheck(${globalIdx}, '${revKey}')">${row[revKey] ? "✓" : ""}</td>
+                        `).join("")}
+                    </tr>
                 `;
             }).join("");
 
-            tr.innerHTML = `
-                <td>${row.row_no}</td>
-                <td><input type="text" class="cell-input" value="${escapeHtml(row.department_name)}" ${isEditMode ? "" : "readonly"} oninput="updateF008Dept(${idx}, this.value)"></td>
-                ${diagHtml}
+            pageDiv.innerHTML = `
+                <div class="rotated-sheet-wrapper">
+                    <div class="rotated-canvas">
+                        <div class="form-top-bar">
+                            <div style="width: 180px; font-size: 13pt;">${totalSheets > 1 ? `แผ่นที่ ${sheetIdx + 1} /${totalSheets}` : ""}</div>
+                            <div class="form-main-title">บัญชีรายชื่อ Drawing</div>
+                            <div style="width: 180px; text-align: right; font-size: 15pt;">
+                                เลขที่ <input type="text" class="inline-input" value="${escapeHtml(sheetDocNo)}" ${isEditMode ? "" : "readonly"} oninput="updateF007SheetSetNo(${sheetIdx}, this.value)">
+                            </div>
+                        </div>
+                        <div class="form-outer-frame">
+                            <div class="form-sub-header">
+                                <div>ประเภทเอกสาร : Drawing</div>
+                                <div></div>
+                            </div>
+                            <table class="form-grid">
+                                <thead>
+                                    <tr>
+                                        <th rowspan="2" style="width: 7%;">ลำดับที่</th>
+                                        <th rowspan="2" style="width: 33%;">รหัสสินค้า</th>
+                                        <th rowspan="2" style="width: 18%;">เลขที่เอกสาร</th>
+                                        <th colspan="6" style="width: 42%;">แก้ไขครั้งที่</th>
+                                    </tr>
+                                    <tr>
+                                        <th style="width: 7%;">00</th>
+                                        <th style="width: 7%;">01</th>
+                                        <th style="width: 7%;">02</th>
+                                        <th style="width: 7%;">03</th>
+                                        <th style="width: 7%;">04</th>
+                                        <th style="width: 7%;">05</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rowsHtml}</tbody>
+                            </table>
+                        </div>
+                        <div class="form-code-bottom">F-MO-007-00</div>
+                    </div>
+                </div>
             `;
-            tbody008.appendChild(tr);
+            container.appendChild(pageDiv);
+        }
+    }
+
+    function renderF008Pages() {
+        const container = document.getElementById("f008_pages_container");
+        const selector = document.getElementById("f008ProductSelector");
+        const badge = document.getElementById("f008CountBadge");
+        container.innerHTML = "";
+        selector.innerHTML = "";
+
+        const activeRows = getActiveDrawingRows();
+        badge.innerText = `(มีใบแจกจ่ายทั้งหมด ${activeRows.length} แผ่น ตามจำนวน Drawing)`;
+
+        // กรณีไม่มี Drawing เลย ให้แสดงแผ่นเปล่า 1 แผ่น
+        const listToRender = activeRows.length > 0
+            ? activeRows.map(r => r.product_code.trim())
+            : ["__EMPTY__"];
+
+        listToRender.forEach((prodCode, idx) => {
+            if (prodCode !== "__EMPTY__") {
+                const opt = document.createElement("option");
+                opt.value = prodCode;
+                opt.textContent = `${idx + 1}. ${prodCode}`;
+                if (prodCode === selectedProductCodeForF008) opt.selected = true;
+                selector.appendChild(opt);
+            } else {
+                const opt = document.createElement("option");
+                opt.value = "__EMPTY__";
+                opt.textContent = "(ยังไม่ได้ระบุรหัสสินค้าใน F-MO-007)";
+                selector.appendChild(opt);
+            }
+
+            const sheetObj = (prodCode !== "__EMPTY__" && stateF008Map[prodCode])
+                ? stateF008Map[prodCode]
+                : createEmptyF008Sheet("", "");
+
+            const isSelectedOnScreen = (prodCode === "__EMPTY__") || (prodCode === selectedProductCodeForF008);
+
+            const pageDiv = document.createElement("div");
+            pageDiv.className = `page landscape-form-page f008-sheet ${isSelectedOnScreen ? "" : "hidden-on-screen"}`;
+            pageDiv.id = `f008_page_${idx}`;
+
+            const rowsHtml = sheetObj.rows_data.map((row, rIdx) => {
+                const diagHtml = diagKeys.map(k => {
+                    const cellObj = (row.cells_data && row.cells_data[k]) ? row.cells_data[k] : { sign: "", date: "" };
+                    return `
+                        <td class="diag-cell" onclick="openDiagModal('${escapeJs(prodCode)}', ${rIdx}, '${k}')">
+                            <div class="diag-wrap">
+                                <span class="diag-sign">${escapeHtml(cellObj.sign || "")}</span>
+                                <span class="diag-date">${escapeHtml(cellObj.date || "")}</span>
+                            </div>
+                        </td>
+                    `;
+                }).join("");
+
+                return `
+                    <tr>
+                        <td>${row.row_no}</td>
+                        <td><input type="text" class="cell-input" value="${escapeHtml(row.department_name)}" ${isEditMode && prodCode !== "__EMPTY__" ? "" : "readonly"} oninput="updateF008Dept('${escapeJs(prodCode)}', ${rIdx}, this.value)"></td>
+                        ${diagHtml}
+                    </tr>
+                `;
+            }).join("");
+
+            pageDiv.innerHTML = `
+                <div class="rotated-sheet-wrapper">
+                    <div class="rotated-canvas">
+                        <div class="form-top-bar">
+                            <div style="width: 180px;"></div>
+                            <div class="form-main-title">ใบแจกจ่าย Drawing (สำเนาควบคุม)</div>
+                            <div style="width: 180px; text-align: right; font-size: 15pt;">
+                                เลขที่ <input type="text" class="inline-input" value="${escapeHtml(sheetObj.doc_set_no)}" ${isEditMode && prodCode !== "__EMPTY__" ? "" : "readonly"} oninput="updateF008DocNo('${escapeJs(prodCode)}', this.value)">
+                            </div>
+                        </div>
+                        <div class="form-outer-frame">
+                            <div class="form-sub-header">
+                                <div>
+                                    รหัสสินค้า <input type="text" class="inline-input" style="width: 240px; font-weight: bold;" value="${escapeHtml(prodCode === '__EMPTY__' ? '' : prodCode)}" readonly>
+                                </div>
+                                <div>แผ่นที่ ${idx + 1} / ${listToRender.length}</div>
+                            </div>
+                            <table class="form-grid">
+                                <thead>
+                                    <tr>
+                                        <th rowspan="2" style="width: 6%;">ลำดับที่</th>
+                                        <th rowspan="2" style="width: 24%;">กลุ่มงานที่ใช้</th>
+                                        <th colspan="2" style="width: 14%;">ออกฉบับใหม่ ครั้งที่ 00</th>
+                                        <th colspan="2" style="width: 14%;">แก้ไขครั้งที่ 01</th>
+                                        <th colspan="2" style="width: 14%;">แก้ไขครั้งที่ 02</th>
+                                        <th colspan="2" style="width: 14%;">แก้ไขครั้งที่ 03</th>
+                                        <th colspan="2" style="width: 14%;">แก้ไขครั้งที่ 04</th>
+                                    </tr>
+                                    <tr>
+                                        <th style="width: 7%;">แจกจ่าย</th>
+                                        <th style="width: 7%;">เรียกคืน</th>
+                                        <th style="width: 7%;">แจกจ่าย</th>
+                                        <th style="width: 7%;">เรียกคืน</th>
+                                        <th style="width: 7%;">แจกจ่าย</th>
+                                        <th style="width: 7%;">เรียกคืน</th>
+                                        <th style="width: 7%;">แจกจ่าย</th>
+                                        <th style="width: 7%;">เรียกคืน</th>
+                                        <th style="width: 7%;">แจกจ่าย</th>
+                                        <th style="width: 7%;">เรียกคืน</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rowsHtml}</tbody>
+                            </table>
+                        </div>
+                        <div class="form-code-bottom">F-MO-008-00</div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(pageDiv);
         });
     }
 
@@ -731,43 +958,84 @@
         return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
-    function onF007MetaChange() {
-        const val = document.getElementById("f007_doc_no").value;
-        stateF007.forEach(r => r.doc_set_no = val);
+    function escapeJs(str) {
+        if (!str) return "";
+        return String(str).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+    }
+
+    // ==================== อัปเดตข้อมูล F-MO-007 และเชื่อมต่อไปยัง F-MO-008 ====================
+    function updateF007SheetSetNo(sheetIdx, val) {
+        const start = sheetIdx * ROWS_PER_SHEET;
+        for (let i = start; i < start + ROWS_PER_SHEET && i < stateF007.length; i++) {
+            stateF007[i].doc_set_no = val;
+        }
         saveToLocalBackup();
     }
 
-    function onF008MetaChange() {
-        const docVal = document.getElementById("f008_doc_no").value;
-        const prodVal = document.getElementById("f008_product_code").value;
-        stateF008.forEach(r => {
-            r.doc_set_no = docVal;
-            r.product_code = prodVal;
-        });
-        saveToLocalBackup();
-    }
-
-    function updateF007Text(idx, field, val) {
+    function updateF007TextOnly(idx, field, val) {
         stateF007[idx][field] = val;
+        saveToLocalBackup();
+    }
+
+    function updateF007Product(idx, val) {
+        const code = val.trim();
+        stateF007[idx].product_code = code;
+        if (code) {
+            if (!stateF007[idx].drawing_doc_no) {
+                stateF007[idx].drawing_doc_no = String(idx + 1).padStart(3, "0");
+            }
+            selectedProductCodeForF008 = code;
+        }
+        saveToLocalBackup();
+        renderAll();
+    }
+
+    function updateF007DocNo(idx, val) {
+        stateF007[idx].drawing_doc_no = val;
+        const code = (stateF007[idx].product_code || "").trim();
+        if (code && stateF008Map[code] && !stateF008Map[code].doc_set_no) {
+            stateF008Map[code].doc_set_no = val;
+        }
         saveToLocalBackup();
     }
 
     function toggleRevCheck(idx, revKey) {
         if (!isEditMode) return;
         stateF007[idx][revKey] = !stateF007[idx][revKey];
-        renderTables();
+        saveToLocalBackup();
+        renderF007Pages();
+    }
+
+    function selectF008Sheet(prodCode) {
+        selectedProductCodeForF008 = prodCode;
+        renderF008Pages();
+    }
+
+    function jumpToF008(prodCode) {
+        selectedProductCodeForF008 = prodCode;
+        renderF008Pages();
+        document.getElementById("f008_control_bar").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function updateF008DocNo(prodCode, val) {
+        if (!stateF008Map[prodCode]) return;
+        stateF008Map[prodCode].doc_set_no = val;
         saveToLocalBackup();
     }
 
-    function updateF008Dept(idx, val) {
-        stateF008[idx].department_name = val;
+    function updateF008Dept(prodCode, rowIdx, val) {
+        if (!stateF008Map[prodCode]) return;
+        stateF008Map[prodCode].rows_data[rowIdx].department_name = val;
         saveToLocalBackup();
     }
 
-    function openDiagModal(rowIdx, key) {
-        if (!isEditMode) return;
-        activeDiagTarget = { rowIdx, key };
-        const current = (stateF008[rowIdx].cells_data && stateF008[rowIdx].cells_data[key]) || { sign: "", date: "" };
+    // ==================== Modal ช่องทแยงมุม ====================
+    function openDiagModal(prodCode, rowIdx, key) {
+        if (!isEditMode || prodCode === "__EMPTY__") return;
+        activeDiagTarget = { prodCode, rowIdx, key };
+        const sheet = stateF008Map[prodCode];
+        const current = (sheet.rows_data[rowIdx].cells_data && sheet.rows_data[rowIdx].cells_data[key]) || { sign: "", date: "" };
+        document.getElementById("diagModalTitle").innerText = `บันทึกแจกจ่าย/เรียกคืน (${prodCode})`;
         document.getElementById("modalSignInput").value = current.sign || "";
         document.getElementById("modalDateInput").value = current.date || "";
         document.getElementById("diagModal").style.display = "flex";
@@ -794,17 +1062,33 @@
 
     function confirmDiagModal() {
         if (!activeDiagTarget) return;
-        const { rowIdx, key } = activeDiagTarget;
-        if (!stateF008[rowIdx].cells_data) stateF008[rowIdx].cells_data = {};
-        stateF008[rowIdx].cells_data[key] = {
+        const { prodCode, rowIdx, key } = activeDiagTarget;
+        const sheet = stateF008Map[prodCode];
+        if (!sheet.rows_data[rowIdx].cells_data) sheet.rows_data[rowIdx].cells_data = {};
+        sheet.rows_data[rowIdx].cells_data[key] = {
             sign: document.getElementById("modalSignInput").value.trim(),
             date: document.getElementById("modalDateInput").value.trim()
         };
         closeDiagModal();
-        renderTables();
         saveToLocalBackup();
+        renderF008Pages();
     }
 
+    // ==================== การสั่งพิมพ์ ====================
+    function printCurrentSelection() {
+        document.body.classList.remove("print-all-f008");
+        window.print();
+    }
+
+    function printAllDocuments() {
+        document.body.classList.add("print-all-f008");
+        window.print();
+        setTimeout(() => {
+            document.body.classList.remove("print-all-f008");
+        }, 500);
+    }
+
+    // ==================== สลับมุมมอง & PIN ====================
     function toggleOrientationView() {
         isHorizontalView = !isHorizontalView;
         const btn = document.getElementById("btnToggleView");
@@ -825,48 +1109,43 @@
             if (pin === MASTER_PIN) {
                 isEditMode = true;
                 document.body.classList.add("edit-mode");
-                document.getElementById("f007_doc_no").removeAttribute("readonly");
-                document.getElementById("f008_doc_no").removeAttribute("readonly");
-                document.getElementById("f008_product_code").removeAttribute("readonly");
                 const btn = document.getElementById("btnLockMode");
                 btn.classList.add("unlocked");
                 btn.innerText = "สถานะ: โหมดแก้ไขข้อมูล (คลิกเพื่อล็อก)";
                 document.getElementById("btnSaveCloud").style.display = "inline-flex";
-                renderTables();
+                renderAll();
             } else if (pin !== null) {
                 alert("รหัส PIN ไม่ถูกต้อง!");
             }
         } else {
             isEditMode = false;
             document.body.classList.remove("edit-mode");
-            document.getElementById("f007_doc_no").setAttribute("readonly", true);
-            document.getElementById("f008_doc_no").setAttribute("readonly", true);
-            document.getElementById("f008_product_code").setAttribute("readonly", true);
             const btn = document.getElementById("btnLockMode");
             btn.classList.remove("unlocked");
             btn.innerText = "สถานะ: อ่านอย่างเดียว (ปลดล็อกด้วย PIN)";
             document.getElementById("btnSaveCloud").style.display = "none";
-            renderTables();
+            renderAll();
         }
     }
 
+    // ==================== บันทึกและโหลดข้อมูล Supabase ====================
     function saveToLocalBackup() {
-        localStorage.setItem("wi_mo_001_f007", JSON.stringify(stateF007));
-        localStorage.setItem("wi_mo_001_f008", JSON.stringify(stateF008));
+        localStorage.setItem("wi_mo_001_f007_v2", JSON.stringify(stateF007));
+        localStorage.setItem("wi_mo_001_f008_v2", JSON.stringify(stateF008Map));
     }
 
     function loadFromLocalBackup() {
-        const local007 = localStorage.getItem("wi_mo_001_f007");
-        const local008 = localStorage.getItem("wi_mo_001_f008");
+        const local007 = localStorage.getItem("wi_mo_001_f007_v2");
+        const local008 = localStorage.getItem("wi_mo_001_f008_v2");
         if (local007) stateF007 = JSON.parse(local007);
-        if (local008) stateF008 = JSON.parse(local008);
+        if (local008) stateF008Map = JSON.parse(local008);
     }
 
     async function fetchFromSupabase() {
         const badge = document.getElementById("dbStatusBadge");
         loadFromLocalBackup();
-        renderTables();
-        await fetchWorkItems(); // ดึงรายการ work_code มาเตรียมไว้
+        renderAll();
+        await fetchWorkItems();
 
         try {
             const headers = {
@@ -875,31 +1154,37 @@
             };
             const [res007, res008] = await Promise.all([
                 fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_master?select=*&order=row_no.asc`, { headers }),
-                fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_distribution?select=*&order=row_no.asc`, { headers })
+                fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_distribution?select=*`, { headers })
             ]);
 
-            if (!res007.ok || !res008.ok) throw new Error("Table error");
+            if (!res007.ok) throw new Error("Table error");
 
             const data007 = await res007.json();
-            const data008 = await res008.json();
-
             if (Array.isArray(data007) && data007.length > 0) {
+                const maxRow = Math.max(...data007.map(d => d.row_no), ROWS_PER_SHEET);
+                const neededSheets = Math.ceil(maxRow / ROWS_PER_SHEET);
+                stateF007 = Array.from({ length: neededSheets * ROWS_PER_SHEET }, (_, i) => createEmptyF007Row(i + 1));
                 data007.forEach(item => {
                     const idx = item.row_no - 1;
                     if (stateF007[idx]) stateF007[idx] = { ...stateF007[idx], ...item };
                 });
             }
-            if (Array.isArray(data008) && data008.length > 0) {
-                data008.forEach(item => {
-                    const idx = item.row_no - 1;
-                    if (stateF008[idx]) stateF008[idx] = { ...stateF008[idx], ...item };
-                });
+
+            if (res008.ok) {
+                const data008 = await res008.json();
+                if (Array.isArray(data008)) {
+                    data008.forEach(item => {
+                        if (item.product_code && Array.isArray(item.rows_data)) {
+                            stateF008Map[item.product_code] = item;
+                        }
+                    });
+                }
             }
 
             badge.className = "status-badge status-online";
             badge.innerText = "เชื่อมต่อ Supabase สำเร็จ (Online)";
             saveToLocalBackup();
-            renderTables();
+            renderAll();
         } catch (err) {
             badge.className = "status-badge status-offline";
             badge.innerText = "โหมดสำรองในเครื่อง (Offline)";
@@ -910,6 +1195,7 @@
         const btn = document.getElementById("btnSaveCloud");
         const origText = btn.innerText;
         btn.innerText = "กำลังบันทึก...";
+        syncF008WithF007();
         saveToLocalBackup();
 
         try {
@@ -920,19 +1206,35 @@
                 "Prefer": "resolution=merge-duplicates"
             };
 
-            const [res1, res2] = await Promise.all([
-                fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_master`, { method: "POST", headers, body: JSON.stringify(stateF007) }),
-                fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_distribution`, { method: "POST", headers, body: JSON.stringify(stateF008) })
-            ]);
+            const f008Payload = Object.values(stateF008Map).filter(item => item.product_code);
 
-            if (!res1.ok || !res2.ok) throw new Error("Save failed");
+            const reqs = [
+                fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_master`, {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify(stateF007)
+                })
+            ];
+
+            if (f008Payload.length > 0) {
+                reqs.push(
+                    fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_distribution`, {
+                        method: "POST",
+                        headers,
+                        body: JSON.stringify(f008Payload)
+                    })
+                );
+            }
+
+            const responses = await Promise.all(reqs);
+            if (responses.some(r => !r.ok)) throw new Error("Save error");
 
             const badge = document.getElementById("dbStatusBadge");
             badge.className = "status-badge status-online";
             badge.innerText = "บันทึกขึ้น Supabase ล่าสุดเรียบร้อย";
-            alert("บันทึกข้อมูลลงฐานข้อมูล Supabase สำเร็จ!");
+            alert("บันทึกข้อมูลบัญชี Drawing และใบแจกจ่ายทุกแผ่นลง Supabase สำเร็จ!");
         } catch (err) {
-            alert("บันทึกไว้ในเครื่องเรียบร้อยแล้ว (ไม่สามารถส่งขึ้น Supabase ได้)");
+            alert("บันทึกในเครื่องเรียบร้อยแล้ว (กรุณาตรวจสอบว่าได้รันคำสั่ง SQL อัปเดตตาราง iso_drawing_distribution หรือยัง)");
         } finally {
             btn.innerText = origText;
         }
