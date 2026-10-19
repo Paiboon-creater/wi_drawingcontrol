@@ -382,7 +382,7 @@
         <span id="f008CountBadge" style="color: #38bdf8; font-weight: bold; margin-left: 8px;"></span>
     </div>
     <div style="font-size: 12px; color: #cbd5e1;">
-        *ตั้งค่ากลุ่มงาน ชื่อผู้รับ และวันที่เริ่มต้น 5 แผนกอัตโนมัติทุกแผ่น
+        *ตั้งค่ากลุ่มงาน ชื่อผู้รับ และวันที่เริ่มต้น 5 แผนกอัตโนมัติครบทุกแผ่น
     </div>
 </div>
 
@@ -417,12 +417,12 @@
     const MASTER_PIN = "112233";
     const ROWS_PER_SHEET = 19;
 
-    // ข้อมูลเริ่มต้น 5 แผนก พร้อมชื่อผู้รับและวันที่ตามภาพ
+    // ข้อมูลเริ่มต้น 5 แผนก พร้อมชื่อผู้รับและวันที่ตามภาพต้นฉบับ
     const DEFAULT_DEPARTMENTS_DATA = [
         { dept: "ผลิตBC", sign: "เปรมทิพย์", date: "19/10/69" },
         { dept: "ผลิตMT", sign: "นิภาพร", date: "19/10/69" },
         { dept: "ตรวจสอบคุณภาพ", sign: "อรอุมา", date: "19/10/69" },
-        { dept: "วางแผนวัตถุดิบ", sign: "อัญญา", date: "19/10/69" },
+        { dept: "วางแผนวัตถุดิบ", sign: "อนัญญา", date: "19/10/69" },
         { dept: "ฝ่ายต่างประเทศ", sign: "วัชรี", date: "19/10/69" }
     ];
 
@@ -444,7 +444,6 @@
         };
     }
 
-    // สร้างแผ่น F-MO-008 พร้อมเติม 5 แผนก, ชื่อผู้รับ และวันที่เริ่มต้นอัตโนมัติ
     function createEmptyF008Sheet(productCode, defaultDocNo = "") {
         const rows = Array.from({ length: ROWS_PER_SHEET }, (_, i) => {
             const defItem = DEFAULT_DEPARTMENTS_DATA[i] || { dept: "", sign: "", date: "" };
@@ -463,6 +462,27 @@
             doc_set_no: defaultDocNo,
             rows_data: rows
         };
+    }
+
+    // ตรวจสอบและบังคับเติมค่าเริ่มต้น 5 แผนก + ชื่อคน + วันที่ ให้กับทุกแผ่น (รวมถึงแผ่นที่เคยโหลดมาจาก DB แล้วว่างอยู่)
+    function ensureDefaultRows(sheetObj) {
+        if (!sheetObj) return;
+        if (!Array.isArray(sheetObj.rows_data) || sheetObj.rows_data.length < ROWS_PER_SHEET) {
+            const existing = Array.isArray(sheetObj.rows_data) ? sheetObj.rows_data : [];
+            sheetObj.rows_data = Array.from({ length: ROWS_PER_SHEET }, (_, i) => existing[i] || { row_no: i + 1, department_name: "", cells_data: {} });
+        }
+        DEFAULT_DEPARTMENTS_DATA.forEach((defItem, idx) => {
+            const row = sheetObj.rows_data[idx];
+            if (!row.department_name || !row.department_name.trim()) {
+                row.department_name = defItem.dept;
+            }
+            if (!row.cells_data || typeof row.cells_data !== "object") {
+                row.cells_data = {};
+            }
+            if (!row.cells_data.r00_dist || (!row.cells_data.r00_dist.sign && !row.cells_data.r00_dist.date)) {
+                row.cells_data.r00_dist = { sign: defItem.sign, date: defItem.date };
+            }
+        });
     }
 
     function buildStoragePublicUrl(fullPath) {
@@ -489,11 +509,10 @@
                 stateF008Map[key] = createEmptyF008Sheet(key, "");
             } else {
                 stateF008Map[key].product_code = key;
-                if (!stateF008Map[key].rows_data || stateF008Map[key].rows_data.length === 0) {
-                    stateF008Map[key] = createEmptyF008Sheet(key, stateF008Map[key].doc_set_no || "");
-                }
+                ensureDefaultRows(stateF008Map[key]);
             }
         });
+        Object.values(stateF008Map).forEach(sheet => ensureDefaultRows(sheet));
     }
 
     async function fetchStorageFiles() {
@@ -628,7 +647,6 @@
 
             const rowsHtml = sheetRows.map((row, rOffset) => {
                 const globalIdx = startIdx + rOffset;
-                const hasPdf = (row.pdf_url || "").trim().length > 0;
 
                 return `
                     <tr>
@@ -638,7 +656,6 @@
                         </td>
                         <td>
                             <input type="text" class="cell-input center" list="storageFilesList" value="${escapeHtml(row.drawing_doc_no)}" ${isEditMode ? "" : "readonly"} onchange="updateF007DocNoAndUrl(${globalIdx}, this.value)" oninput="updateF007TextOnly(${globalIdx}, 'drawing_doc_no', this.value)">
-                            ${hasPdf ? `<a href="${row.pdf_url}" target="_blank" class="no-print" style="position:absolute; right:3px; top:2px; font-size:9.5pt; color:#0284c7; font-weight:bold; text-decoration:none;" title="คลิกเพื่อเปิดดูไฟล์ PDF">เปิดดู</a>` : ""}
                         </td>
                         ${["rev_00","rev_01","rev_02","rev_03","rev_04","rev_05"].map(revKey => `
                             <td class="rev-check-cell" onclick="toggleRevCheck(${globalIdx}, '${revKey}')">${row[revKey] ? "✓" : ""}</td>
@@ -691,4 +708,266 @@
             : [{ rowIndex: 0, rowNo: 1, productCode: "", drawingDocNo: "" }];
 
         sheetsToRender.forEach((item) => {
-            const prodCode = item
+            const prodCode = item.productCode;
+            const sheetObj = (prodCode && stateF008Map[prodCode])
+                ? stateF008Map[prodCode]
+                : createEmptyF008Sheet(prodCode, "");
+
+            ensureDefaultRows(sheetObj);
+
+            const pageDiv = document.createElement("div");
+            pageDiv.className = "page landscape-form-page f008-sheet";
+
+            const rowsHtml = sheetObj.rows_data.map((row, rIdx) => {
+                const diagHtml = diagKeys.map(k => {
+                    const cellObj = (row.cells_data && row.cells_data[k]) ? row.cells_data[k] : { sign: "", date: "" };
+                    return `
+                        <td class="diag-cell" onclick="openDiagModal('${escapeJs(prodCode)}', ${rIdx}, '${k}')">
+                            <div class="diag-wrap">
+                                <span class="diag-sign">${escapeHtml(cellObj.sign || "")}</span>
+                                <span class="diag-date">${escapeHtml(cellObj.date || "")}</span>
+                            </div>
+                        </td>
+                    `;
+                }).join("");
+
+                return `<tr><td>${row.row_no}</td><td><input type="text" class="cell-input" value="${escapeHtml(row.department_name)}" ${isEditMode && prodCode ? "" : "readonly"} oninput="updateF008Dept('${escapeJs(prodCode)}', ${rIdx}, this.value)"></td>${diagHtml}</tr>`;
+            }).join("");
+
+            pageDiv.innerHTML = `
+                <div class="rotated-sheet-wrapper">
+                    <div class="rotated-canvas">
+                        <div class="form-top-bar">
+                            <div style="width: 180px;"></div>
+                            <div class="form-main-title">ใบแจกจ่าย Drawing (สำเนาควบคุม)</div>
+                            <div style="width: 180px; text-align: right; font-size: 15pt;">
+                                เลขที่ <input type="text" class="inline-input" value="${escapeHtml(sheetObj.doc_set_no)}" ${isEditMode && prodCode ? "" : "readonly"} oninput="updateF008DocNo('${escapeJs(prodCode)}', this.value)">
+                            </div>
+                        </div>
+                        <div class="form-outer-frame">
+                            <div class="form-sub-header">
+                                <div>รหัสสินค้า <input type="text" class="inline-input" style="width: 260px; font-weight: bold;" value="${escapeHtml(prodCode)}" readonly></div>
+                                <div></div>
+                            </div>
+                            <table class="form-grid">
+                                <thead>
+                                    <tr>
+                                        <th rowspan="2" style="width: 6%;">ลำดับที่</th><th rowspan="2" style="width: 24%;">กลุ่มงานที่ใช้</th>
+                                        <th colspan="2" style="width: 14%;">ออกฉบับใหม่ ครั้งที่ 00</th><th colspan="2" style="width: 14%;">แก้ไขครั้งที่ 01</th><th colspan="2" style="width: 14%;">แก้ไขครั้งที่ 02</th><th colspan="2" style="width: 14%;">แก้ไขครั้งที่ 03</th><th colspan="2" style="width: 14%;">แก้ไขครั้งที่ 04</th>
+                                    </tr>
+                                    <tr>
+                                        <th style="width: 7%;">แจกจ่าย</th><th style="width: 7%;">เรียกคืน</th><th style="width: 7%;">แจกจ่าย</th><th style="width: 7%;">เรียกคืน</th><th style="width: 7%;">แจกจ่าย</th><th style="width: 7%;">เรียกคืน</th><th style="width: 7%;">แจกจ่าย</th><th style="width: 7%;">เรียกคืน</th><th style="width: 7%;">แจกจ่าย</th><th style="width: 7%;">เรียกคืน</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rowsHtml}</tbody>
+                            </table>
+                        </div>
+                        <div class="form-code-bottom">F-MO-008-00</div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(pageDiv);
+        });
+    }
+
+    function escapeHtml(str) { return !str ? "" : String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+    function escapeJs(str) { return !str ? "" : String(str).replace(/\\/g, "\\\\").replace(/'/g, "\\'"); }
+
+    function onLiveF007ProductInput(idx, val) {
+        const code = val.trim();
+        stateF007[idx].product_code = code;
+
+        const matchingFile = Object.keys(storageFilesMap).find(
+            fName => fName.toLowerCase() === code.toLowerCase() || fName.replace(/\.pdf$/i, "").toLowerCase() === code.toLowerCase()
+        );
+        if (matchingFile) {
+            stateF007[idx].pdf_url = buildStoragePublicUrl(storageFilesMap[matchingFile]);
+        }
+
+        syncF008WithF007();
+        saveToLocalBackup();
+        renderF008Pages();
+    }
+
+    function updateF007Product(idx, val) {
+        onLiveF007ProductInput(idx, val);
+        renderF007Pages();
+    }
+
+    function updateF007DocNoAndUrl(idx, val) {
+        const trimmed = val.trim();
+        stateF007[idx].drawing_doc_no = trimmed;
+
+        if (storageFilesMap[trimmed]) {
+            stateF007[idx].pdf_url = buildStoragePublicUrl(storageFilesMap[trimmed]);
+        } else if (trimmed.toLowerCase().endsWith(".pdf")) {
+            stateF007[idx].pdf_url = buildStoragePublicUrl(`${STORAGE_FOLDER}/${trimmed}`);
+        }
+        saveToLocalBackup();
+        renderF007Pages();
+    }
+
+    function updateF007SheetSetNo(sheetIdx, val) {
+        const start = sheetIdx * ROWS_PER_SHEET;
+        for (let i = start; i < start + ROWS_PER_SHEET && i < stateF007.length; i++) stateF007[i].doc_set_no = val;
+        saveToLocalBackup();
+    }
+    function updateF007TextOnly(idx, field, val) { stateF007[idx][field] = val; saveToLocalBackup(); }
+    function toggleRevCheck(idx, revKey) {
+        if (!isEditMode) return; stateF007[idx][revKey] = !stateF007[idx][revKey]; saveToLocalBackup(); renderF007Pages();
+    }
+    function updateF008DocNo(prodCode, val) { if (stateF008Map[prodCode]) { stateF008Map[prodCode].doc_set_no = val; saveToLocalBackup(); } }
+    function updateF008Dept(prodCode, rowIdx, val) { if (stateF008Map[prodCode]) { stateF008Map[prodCode].rows_data[rowIdx].department_name = val; saveToLocalBackup(); } }
+
+    function openDiagModal(prodCode, rowIdx, key) {
+        if (!isEditMode || !prodCode) return;
+        activeDiagTarget = { prodCode, rowIdx, key };
+        const sheet = stateF008Map[prodCode];
+        const current = (sheet.rows_data[rowIdx].cells_data && sheet.rows_data[rowIdx].cells_data[key]) || { sign: "", date: "" };
+        const signInput = document.getElementById("modalSignInput");
+        const dateInput = document.getElementById("modalDateInput");
+        if (signInput) signInput.value = current.sign || "";
+        if (dateInput) dateInput.value = current.date || "";
+        const modal = document.getElementById("diagModal");
+        if (modal) modal.style.display = "flex";
+        if (signInput) signInput.focus();
+    }
+    function closeDiagModal() {
+        const modal = document.getElementById("diagModal");
+        if (modal) modal.style.display = "none";
+        activeDiagTarget = null;
+    }
+    function fillTodayDate() {
+        const d = new Date();
+        const dateInput = document.getElementById("modalDateInput");
+        if (dateInput) {
+            dateInput.value = `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getFullYear()+543).slice(-2)}`;
+        }
+    }
+    function clearDiagCell() {
+        const signInput = document.getElementById("modalSignInput");
+        const dateInput = document.getElementById("modalDateInput");
+        if (signInput) signInput.value = "";
+        if (dateInput) dateInput.value = "";
+    }
+    function confirmDiagModal() {
+        if (!activeDiagTarget) return;
+        const { prodCode, rowIdx, key } = activeDiagTarget;
+        const sheet = stateF008Map[prodCode];
+        if (!sheet.rows_data[rowIdx].cells_data) sheet.rows_data[rowIdx].cells_data = {};
+        const signInput = document.getElementById("modalSignInput");
+        const dateInput = document.getElementById("modalDateInput");
+        sheet.rows_data[rowIdx].cells_data[key] = {
+            sign: signInput ? signInput.value.trim() : "",
+            date: dateInput ? dateInput.value.trim() : ""
+        };
+        closeDiagModal(); saveToLocalBackup(); renderF008Pages();
+    }
+
+    function toggleOrientationView() {
+        isHorizontalView = !isHorizontalView;
+        const btn = document.getElementById("btnToggleView");
+        if (!btn) return;
+        if (isHorizontalView) { document.body.classList.add("horizontal-view"); btn.classList.add("active"); btn.innerText = "โหมดมุมมอง: แนวนอนอ่านง่าย"; }
+        else { document.body.classList.remove("horizontal-view"); btn.classList.remove("active"); btn.innerText = "โหมดมุมมอง: A4 เสมือนพิมพ์"; }
+    }
+    function toggleEditLock() {
+        if (!isEditMode) {
+            const pin = prompt("กรุณากรอกรหัส Master PIN:");
+            if (pin === MASTER_PIN) {
+                isEditMode = true; document.body.classList.add("edit-mode");
+                const btn = document.getElementById("btnLockMode");
+                if (btn) { btn.classList.add("unlocked"); btn.innerText = "สถานะ: โหมดแก้ไขข้อมูล"; }
+                const saveBtn = document.getElementById("btnSaveCloud");
+                if (saveBtn) saveBtn.style.display = "inline-flex";
+                renderAll();
+            } else if (pin !== null) alert("รหัส PIN ไม่ถูกต้อง!");
+        } else {
+            isEditMode = false; document.body.classList.remove("edit-mode");
+            const btn = document.getElementById("btnLockMode");
+            if (btn) { btn.classList.remove("unlocked"); btn.innerText = "สถานะ: อ่านอย่างเดียว"; }
+            const saveBtn = document.getElementById("btnSaveCloud");
+            if (saveBtn) saveBtn.style.display = "none";
+            renderAll();
+        }
+    }
+
+    function saveToLocalBackup() {
+        localStorage.setItem("wi_mo_001_f007_v12", JSON.stringify(stateF007));
+        localStorage.setItem("wi_mo_001_f008_v12", JSON.stringify(stateF008Map));
+    }
+    function loadFromLocalBackup() {
+        const l007 = localStorage.getItem("wi_mo_001_f007_v12") || localStorage.getItem("wi_mo_001_f007_v11");
+        const l008 = localStorage.getItem("wi_mo_001_f008_v12") || localStorage.getItem("wi_mo_001_f008_v11");
+        if (l007) stateF007 = JSON.parse(l007);
+        if (l008) {
+            stateF008Map = JSON.parse(l008);
+            Object.values(stateF008Map).forEach(sheet => ensureDefaultRows(sheet));
+        }
+    }
+
+    async function fetchFromSupabase() {
+        const badge = document.getElementById("dbStatusBadge");
+        loadFromLocalBackup(); renderAll();
+        await Promise.all([fetchWorkItems(), fetchStorageFiles()]);
+        try {
+            const headers = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` };
+            const [res007, res008] = await Promise.all([
+                fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_master?select=*&order=row_no.asc`, { headers }),
+                fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_distribution?select=*`, { headers })
+            ]);
+            if (res007.ok) {
+                const data007 = await res007.json();
+                if (Array.isArray(data007) && data007.length > 0) {
+                    const maxRow = Math.max(...data007.map(d => d.row_no), ROWS_PER_SHEET);
+                    const neededSheets = Math.ceil(maxRow / ROWS_PER_SHEET);
+                    stateF007 = Array.from({ length: neededSheets * ROWS_PER_SHEET }, (_, i) => createEmptyF007Row(i + 1));
+                    data007.forEach(item => { const idx = item.row_no - 1; if (stateF007[idx]) stateF007[idx] = { ...stateF007[idx], ...item }; });
+                }
+            }
+            if (res008.ok) {
+                const data008 = await res008.json();
+                if (Array.isArray(data008)) {
+                    data008.forEach(item => {
+                        if (item.product_code) {
+                            ensureDefaultRows(item);
+                            stateF008Map[item.product_code] = item;
+                        }
+                    });
+                }
+            }
+            if (badge) { badge.className = "status-badge status-online"; badge.innerText = "เชื่อมต่อ Storage Dropdown สำเร็จ"; }
+            saveToLocalBackup(); renderAll();
+        } catch (err) {
+            if (badge) { badge.className = "status-badge status-offline"; badge.innerText = "โหมดสำรองในเครื่อง (Offline)"; }
+        }
+    }
+
+    async function saveAllToSupabase() {
+        const btn = document.getElementById("btnSaveCloud");
+        const origText = btn ? btn.innerText : "";
+        if (btn) btn.innerText = "กำลังบันทึก...";
+        syncF008WithF007(); saveToLocalBackup();
+        try {
+            const headers = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates" };
+            const f008Payload = Object.values(stateF008Map).filter(item => item.product_code);
+            const reqs = [fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_master`, { method: "POST", headers, body: JSON.stringify(stateF007) })];
+            if (f008Payload.length > 0) {
+                reqs.push(fetch(`${SUPABASE_URL}/rest/v1/iso_drawing_distribution`, {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify(f008Payload.map(i => ({ product_code: i.product_code, doc_set_no: i.doc_set_no || "", rows_data: i.rows_data })))
+                }));
+            }
+            const responses = await Promise.all(reqs);
+            if (responses.some(r => !r.ok)) throw new Error("Save error");
+            alert("บันทึกข้อมูลและลิงก์ PDF ลงฐานข้อมูล Supabase สำเร็จ!");
+        } catch (err) { alert("บันทึกในเครื่องเรียบร้อยแล้ว"); }
+        finally { if (btn) btn.innerText = origText; }
+    }
+
+    window.addEventListener("DOMContentLoaded", fetchFromSupabase);
+</script>
+
+</body>
+</html>
