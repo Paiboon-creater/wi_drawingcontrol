@@ -156,7 +156,10 @@
             }
             table.form-grid thead { display: table-row-group !important; }
             table.form-grid tr, table.form-grid td, table.form-grid th { page-break-inside: avoid !important; break-inside: avoid !important; }
-            .diag-sign { color: #000 !important; }
+            .diag-sign, .pdf-doc-link, .cell-input.has-pdf-link {
+                color: #000 !important;
+                text-decoration: none !important;
+            }
             body.edit-mode .cell-input, body.edit-mode .inline-input { background: transparent !important; }
         }
 
@@ -197,8 +200,44 @@
         }
         table.form-grid th { font-weight: bold; background-color: #fff; }
 
-        .cell-input { width: 100%; height: 100%; border: none; background: transparent; font-family: inherit; font-size: 13pt; color: #000; padding: 0 4px; outline: none; }
+        .cell-input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 13pt;
+            color: #000;
+            padding: 0 4px;
+            outline: none;
+            text-align: left;
+        }
         .cell-input.center { text-align: center; }
+
+        /* สไตล์ลิงก์เปิดไฟล์ PDF ในช่องเลขที่เอกสาร */
+        .pdf-doc-link {
+            display: block;
+            width: 100%;
+            height: 100%;
+            line-height: 20px;
+            text-align: left;
+            padding: 0 4px;
+            color: #003399;
+            text-decoration: underline;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .pdf-doc-link:hover {
+            color: #0284c7;
+            background-color: rgba(14, 165, 233, 0.08);
+        }
+        .cell-input.has-pdf-link {
+            color: #003399;
+            text-decoration: underline;
+        }
+
         .inline-input { border: none; border-bottom: 1px solid #000; background: transparent; font-family: inherit; font-size: 14pt; color: #000; width: 130px; text-align: center; outline: none; }
         body.edit-mode .cell-input:not([readonly]), body.edit-mode .inline-input:not([readonly]) { background-color: rgba(14, 165, 233, 0.08); }
         body.edit-mode .cell-input:focus, body.edit-mode .inline-input:focus { background-color: rgba(250, 204, 21, 0.25); }
@@ -366,7 +405,7 @@
 <!-- ==================== ส่วนควบคุมแผ่นงาน F-MO-007 ==================== -->
 <div class="section-control-bar">
     <div>
-        <b>ส่วนที่ 1: บัญชีรายชื่อ Drawing (F-MO-007-00)</b> — ดึงรายชื่อไฟล์จากโฟลเดอร์ <code>design</code> (<span id="storageCountLabel">กำลังโหลด...</span>)
+        <b>ส่วนที่ 1: บัญชีรายชื่อ Drawing (F-MO-007-00)</b> — คลิกที่ชื่อไฟล์ในช่อง "เลขที่เอกสาร" เพื่อเปิดดู PDF ได้ทันที (<span id="storageCountLabel">กำลังโหลด...</span>)
     </div>
     <div>
         <button class="btn btn-add-sheet" onclick="addNewF007Sheet()">+ เพิ่มแผ่นบัญชี Drawing (แผ่นที่ <span id="nextSheetNumLabel">2</span>)</button>
@@ -417,7 +456,6 @@
     const MASTER_PIN = "112233";
     const ROWS_PER_SHEET = 19;
 
-    // ข้อมูลเริ่มต้น 5 แผนก พร้อมชื่อผู้รับและวันที่ตามภาพต้นฉบับ
     const DEFAULT_DEPARTMENTS_DATA = [
         { dept: "ผลิตBC", sign: "เปรมทิพย์", date: "19/10/69" },
         { dept: "ผลิตMT", sign: "นิภาพร", date: "19/10/69" },
@@ -464,7 +502,6 @@
         };
     }
 
-    // บังคับเติมค่าเริ่มต้น 5 แผนก + ชื่อคน + วันที่ ให้ครบทุกแผ่น
     function ensureDefaultRows(sheetObj, fallbackRowNo = "") {
         if (!sheetObj) return;
         if (fallbackRowNo !== "" && (!sheetObj.doc_set_no || !String(sheetObj.doc_set_no).trim())) {
@@ -493,6 +530,28 @@
         return `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${encodedPath}`;
     }
 
+    // ค้นหาลิงก์ PDF อัตโนมัติจากชื่อไฟล์ในช่องเลขที่เอกสาร หรือรหัสสินค้า
+    function resolvePdfUrlForRow(row) {
+        if (row.pdf_url && row.pdf_url.trim()) return row.pdf_url.trim();
+        const docNo = (row.drawing_doc_no || "").trim();
+        if (docNo) {
+            if (storageFilesMap[docNo]) return buildStoragePublicUrl(storageFilesMap[docNo]);
+            const matchByDoc = Object.keys(storageFilesMap).find(
+                fName => fName.toLowerCase() === docNo.toLowerCase() || fName.replace(/\.pdf$/i, "").toLowerCase() === docNo.toLowerCase()
+            );
+            if (matchByDoc) return buildStoragePublicUrl(storageFilesMap[matchByDoc]);
+            if (docNo.toLowerCase().endsWith(".pdf")) return buildStoragePublicUrl(`${STORAGE_FOLDER}/${docNo}`);
+        }
+        const prodCode = (row.product_code || "").trim();
+        if (prodCode) {
+            const matchByProd = Object.keys(storageFilesMap).find(
+                fName => fName.toLowerCase() === prodCode.toLowerCase() || fName.replace(/\.pdf$/i, "").toLowerCase() === prodCode.toLowerCase()
+            );
+            if (matchByProd) return buildStoragePublicUrl(storageFilesMap[matchByProd]);
+        }
+        return "";
+    }
+
     function getFilledDrawingRows() {
         const list = [];
         stateF007.forEach((r, idx) => {
@@ -504,7 +563,6 @@
         return list;
     }
 
-    // ผูกข้อมูล F-MO-008 กับ F-MO-007 พร้อมนำเลขลำดับแถว (rowNo) ไปใส่ในช่อง "เลขที่" (doc_set_no) ไล่ไปเรื่อยๆ
     function syncF008WithF007() {
         const filledRows = getFilledDrawingRows();
         filledRows.forEach(item => {
@@ -653,6 +711,18 @@
 
             const rowsHtml = sheetRows.map((row, rOffset) => {
                 const globalIdx = startIdx + rOffset;
+                const resolvedPdfUrl = resolvePdfUrlForRow(row);
+                row.pdf_url = resolvedPdfUrl;
+                const hasPdf = resolvedPdfUrl.length > 0;
+
+                // ในโหมดอ่านอย่างเดียว หากมีลิงก์ PDF ให้คลิกที่ข้อความในช่องเลขที่เอกสารเพื่อเปิดไฟล์ PDF ได้ทันที
+                // ในโหมดแก้ไข ช่องเลขที่เอกสารจัดชิดซ้าย และดับเบิลคลิกหรือ Ctrl+Click เพื่อเปิดดูไฟล์ PDF ได้เช่นกัน
+                let docCellContent = "";
+                if (!isEditMode && hasPdf && (row.drawing_doc_no || "").trim()) {
+                    docCellContent = `<a href="${resolvedPdfUrl}" target="_blank" class="pdf-doc-link" title="คลิกเพื่อเปิดดูไฟล์ PDF Drawing">${escapeHtml(row.drawing_doc_no)}</a>`;
+                } else {
+                    docCellContent = `<input type="text" class="cell-input ${hasPdf ? 'has-pdf-link' : ''}" list="storageFilesList" value="${escapeHtml(row.drawing_doc_no)}" ${isEditMode ? "" : "readonly"} title="${hasPdf ? 'ดับเบิลคลิก หรือ Ctrl+คลิก เพื่อเปิดดูไฟล์ PDF' : ''}" ondblclick="openPdfFromRow(${globalIdx})" onclick="handleDocInputClick(event, ${globalIdx})" onchange="updateF007DocNoAndUrl(${globalIdx}, this.value)" oninput="updateF007TextOnly(${globalIdx}, 'drawing_doc_no', this.value)">`;
+                }
 
                 return `
                     <tr>
@@ -660,8 +730,8 @@
                         <td>
                             <input type="text" class="cell-input" list="workItemsList" value="${escapeHtml(row.product_code)}" ${isEditMode ? "" : "readonly"} onchange="updateF007Product(${globalIdx}, this.value)" oninput="onLiveF007ProductInput(${globalIdx}, this.value)">
                         </td>
-                        <td>
-                            <input type="text" class="cell-input center" list="storageFilesList" value="${escapeHtml(row.drawing_doc_no)}" ${isEditMode ? "" : "readonly"} onchange="updateF007DocNoAndUrl(${globalIdx}, this.value)" oninput="updateF007TextOnly(${globalIdx}, 'drawing_doc_no', this.value)">
+                        <td style="text-align: left;">
+                            ${docCellContent}
                         </td>
                         ${["rev_00","rev_01","rev_02","rev_03","rev_04","rev_05"].map(revKey => `
                             <td class="rev-check-cell" onclick="toggleRevCheck(${globalIdx}, '${revKey}')">${row[revKey] ? "✓" : ""}</td>
@@ -670,6 +740,7 @@
                 `;
             }).join("");
 
+            // ปรับความกว้างคอลัมน์: ลำดับที่ 5% | รหัสสินค้า 29% | เลขที่เอกสาร ขยายเพิ่มเป็น 24% (+5 ตัวอักษร) | แก้ไขครั้งที่ 42%
             pageDiv.innerHTML = `
                 <div class="rotated-sheet-wrapper">
                     <div class="rotated-canvas">
@@ -685,9 +756,19 @@
                             <table class="form-grid">
                                 <thead>
                                     <tr>
-                                        <th rowspan="2" style="width: 7%;">ลำดับที่</th><th rowspan="2" style="width: 33%;">รหัสสินค้า</th><th rowspan="2" style="width: 18%;">เลขที่เอกสาร</th><th colspan="6" style="width: 42%;">แก้ไขครั้งที่</th>
+                                        <th rowspan="2" style="width: 5%;">ลำดับที่</th>
+                                        <th rowspan="2" style="width: 29%;">รหัสสินค้า</th>
+                                        <th rowspan="2" style="width: 24%;">เลขที่เอกสาร</th>
+                                        <th colspan="6" style="width: 42%;">แก้ไขครั้งที่</th>
                                     </tr>
-                                    <tr><th style="width: 7%;">00</th><th style="width: 7%;">01</th><th style="width: 7%;">02</th><th style="width: 7%;">03</th><th style="width: 7%;">04</th><th style="width: 7%;">05</th></tr>
+                                    <tr>
+                                        <th style="width: 7%;">00</th>
+                                        <th style="width: 7%;">01</th>
+                                        <th style="width: 7%;">02</th>
+                                        <th style="width: 7%;">03</th>
+                                        <th style="width: 7%;">04</th>
+                                        <th style="width: 7%;">05</th>
+                                    </tr>
                                 </thead>
                                 <tbody>${rowsHtml}</tbody>
                             </table>
@@ -697,6 +778,19 @@
                 </div>
             `;
             container.appendChild(pageDiv);
+        }
+    }
+
+    function openPdfFromRow(idx) {
+        const row = stateF007[idx];
+        if (!row) return;
+        const url = resolvePdfUrlForRow(row);
+        if (url) window.open(url, "_blank");
+    }
+
+    function handleDocInputClick(event, idx) {
+        if (event.ctrlKey || event.metaKey || !isEditMode) {
+            openPdfFromRow(idx);
         }
     }
 
@@ -720,7 +814,6 @@
                 ? stateF008Map[prodCode]
                 : createEmptyF008Sheet(prodCode, rowSeqNo);
 
-            // บังคับให้ช่อง "เลขที่" มุมขวาบน แสดงเลขลำดับแถวของตารางแรกเสมอ
             sheetObj.doc_set_no = rowSeqNo;
             ensureDefaultRows(sheetObj, rowSeqNo);
 
@@ -806,12 +899,8 @@
     function updateF007DocNoAndUrl(idx, val) {
         const trimmed = val.trim();
         stateF007[idx].drawing_doc_no = trimmed;
-
-        if (storageFilesMap[trimmed]) {
-            stateF007[idx].pdf_url = buildStoragePublicUrl(storageFilesMap[trimmed]);
-        } else if (trimmed.toLowerCase().endsWith(".pdf")) {
-            stateF007[idx].pdf_url = buildStoragePublicUrl(`${STORAGE_FOLDER}/${trimmed}`);
-        }
+        stateF007[idx].pdf_url = "";
+        stateF007[idx].pdf_url = resolvePdfUrlForRow(stateF007[idx]);
         saveToLocalBackup();
         renderF007Pages();
     }
@@ -821,7 +910,14 @@
         for (let i = start; i < start + ROWS_PER_SHEET && i < stateF007.length; i++) stateF007[i].doc_set_no = val;
         saveToLocalBackup();
     }
-    function updateF007TextOnly(idx, field, val) { stateF007[idx][field] = val; saveToLocalBackup(); }
+    function updateF007TextOnly(idx, field, val) {
+        stateF007[idx][field] = val;
+        if (field === "drawing_doc_no") {
+            stateF007[idx].pdf_url = "";
+            stateF007[idx].pdf_url = resolvePdfUrlForRow(stateF007[idx]);
+        }
+        saveToLocalBackup();
+    }
     function toggleRevCheck(idx, revKey) {
         if (!isEditMode) return; stateF007[idx][revKey] = !stateF007[idx][revKey]; saveToLocalBackup(); renderF007Pages();
     }
@@ -902,12 +998,12 @@
     }
 
     function saveToLocalBackup() {
-        localStorage.setItem("wi_mo_001_f007_v13", JSON.stringify(stateF007));
-        localStorage.setItem("wi_mo_001_f008_v13", JSON.stringify(stateF008Map));
+        localStorage.setItem("wi_mo_001_f007_v14", JSON.stringify(stateF007));
+        localStorage.setItem("wi_mo_001_f008_v14", JSON.stringify(stateF008Map));
     }
     function loadFromLocalBackup() {
-        const l007 = localStorage.getItem("wi_mo_001_f007_v13") || localStorage.getItem("wi_mo_001_f007_v12") || localStorage.getItem("wi_mo_001_f007_v11");
-        const l008 = localStorage.getItem("wi_mo_001_f008_v13") || localStorage.getItem("wi_mo_001_f008_v12") || localStorage.getItem("wi_mo_001_f008_v11");
+        const l007 = localStorage.getItem("wi_mo_001_f007_v14") || localStorage.getItem("wi_mo_001_f007_v13") || localStorage.getItem("wi_mo_001_f007_v12");
+        const l008 = localStorage.getItem("wi_mo_001_f008_v14") || localStorage.getItem("wi_mo_001_f008_v13") || localStorage.getItem("wi_mo_001_f008_v12");
         if (l007) stateF007 = JSON.parse(l007);
         if (l008) {
             stateF008Map = JSON.parse(l008);
@@ -919,6 +1015,7 @@
         const badge = document.getElementById("dbStatusBadge");
         loadFromLocalBackup(); renderAll();
         await Promise.all([fetchWorkItems(), fetchStorageFiles()]);
+        renderAll();
         try {
             const headers = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` };
             const [res007, res008] = await Promise.all([
