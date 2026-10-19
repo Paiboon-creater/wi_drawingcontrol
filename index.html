@@ -423,7 +423,7 @@
         <span id="f008CountBadge" style="color: #38bdf8; font-weight: bold; margin-left: 8px;"></span>
     </div>
     <div style="font-size: 12px; color: #cbd5e1;">
-        *ดึงเลขลำดับแถวจากตารางแรกมาใส่ช่อง "เลขที่" และตั้งค่าเริ่มต้น 5 แผนกอัตโนมัติครบทุกแผ่น
+        *รันเลขแผ่นแบบ 01, 02, 03... อัตโนมัติ และตั้งค่าเริ่มต้น 5 แผนกครบทุกแผ่น
     </div>
 </div>
 
@@ -567,13 +567,13 @@
         const storageNames = Object.keys(storageFilesMap).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
         if (storageNames.length === 0) return;
 
-        const firstDocSetNo = stateF007[0]?.doc_set_no || "";
-
         if (overwriteAll) {
             const neededSheets = Math.max(1, Math.ceil(storageNames.length / ROWS_PER_SHEET));
             stateF007 = Array.from({ length: neededSheets * ROWS_PER_SHEET }, (_, i) => {
                 const r = createEmptyF007Row(i + 1);
-                r.doc_set_no = firstDocSetNo;
+                // รันเลขหัวกระดาษแผ่นละ 01, 02, 03... ตามลำดับแผ่น
+                const sheetIdx = Math.floor(i / ROWS_PER_SHEET);
+                r.doc_set_no = String(sheetIdx + 1).padStart(2, '0');
                 return r;
             });
 
@@ -592,7 +592,17 @@
         );
 
         const missingFiles = storageNames.filter(fName => !existingDocs.has(fName.toLowerCase()));
-        if (missingFiles.length === 0) return;
+        if (missingFiles.length === 0) {
+            // อัปเดตรันเลขหัวกระดาษ F-MO-007 ตามลำดับแผ่นให้ถูกต้องเสมอ
+            const totalSheets = Math.max(1, Math.ceil(stateF007.length / ROWS_PER_SHEET));
+            for (let s = 0; s < totalSheets; s++) {
+                const sheetNoFormatted = String(s + 1).padStart(2, '0');
+                for (let k = s * ROWS_PER_SHEET; k < (s + 1) * ROWS_PER_SHEET && k < stateF007.length; k++) {
+                    stateF007[k].doc_set_no = sheetNoFormatted;
+                }
+            }
+            return;
+        }
 
         let fileCursor = 0;
 
@@ -611,7 +621,6 @@
             const currentLen = stateF007.length;
             for (let k = 1; k <= ROWS_PER_SHEET; k++) {
                 const newRow = createEmptyF007Row(currentLen + k);
-                newRow.doc_set_no = firstDocSetNo;
                 if (fileCursor < missingFiles.length) {
                     const fName = missingFiles[fileCursor++];
                     newRow.drawing_doc_no = fName;
@@ -621,13 +630,22 @@
                 stateF007.push(newRow);
             }
         }
+
+        // จัดระเบียบเลขหัวกระดาษแผ่นละ 01, 02, 03... ใหม่ทั้งหมดตามจำนวนแผ่นจริง
+        const totalSheets = Math.max(1, Math.ceil(stateF007.length / ROWS_PER_SHEET));
+        for (let s = 0; s < totalSheets; s++) {
+            const sheetNoFormatted = String(s + 1).padStart(2, '0');
+            for (let k = s * ROWS_PER_SHEET; k < (s + 1) * ROWS_PER_SHEET && k < stateF007.length; k++) {
+                stateF007[k].doc_set_no = sheetNoFormatted;
+            }
+        }
     }
 
     async function forceFillAllPdfFiles() {
         await fetchStorageFiles();
         const storageNames = Object.keys(storageFilesMap);
         if (storageNames.length === 0) {
-            alert("ไม่พบไฟล์ PDF ในถังข้อมูล Storage (กรุณาตรวจสอบว่าเปิด Public Bucket และ Policy SELECT บน Supabase แล้ว)");
+            alert("ไม่พบไฟล์ PDF ในถังข้อมูล Storage");
             return;
         }
         autoFillStorageFilesToRows(true);
@@ -651,7 +669,9 @@
             if (!r) return;
             const code = String(r.product_code || "").trim() || String(r.drawing_doc_no || "").replace(/\.pdf$/i, "").trim();
             if (code) {
-                list.push({ rowIndex: idx, rowNo: r.row_no || (idx + 1), productCode: code, drawingDocNo: r.drawing_doc_no || "" });
+                const rawSeq = r.row_no || (idx + 1);
+                const formattedSeq = String(rawSeq).padStart(2, '0');
+                list.push({ rowIndex: idx, rowNo: rawSeq, seqFormatted: formattedSeq, productCode: code, drawingDocNo: r.drawing_doc_no || "" });
             }
         });
         return list;
@@ -661,7 +681,7 @@
         const filledRows = getFilledDrawingRows();
         filledRows.forEach(item => {
             const key = item.productCode;
-            const rowSeqNo = String(item.rowNo);
+            const rowSeqNo = item.seqFormatted;
             if (!stateF008Map[key]) {
                 stateF008Map[key] = createEmptyF008Sheet(key, rowSeqNo);
             } else {
@@ -770,10 +790,12 @@
 
     function addNewF007Sheet() {
         const currentLen = stateF007.length;
-        const firstDocNo = stateF007[0]?.doc_set_no || "";
+        const totalSheetsBefore = Math.ceil(currentLen / ROWS_PER_SHEET);
+        const newSheetNoFormatted = String(totalSheetsBefore + 1).padStart(2, '0');
+
         for (let i = 1; i <= ROWS_PER_SHEET; i++) {
             const newRow = createEmptyF007Row(currentLen + i);
-            newRow.doc_set_no = firstDocNo;
+            newRow.doc_set_no = newSheetNoFormatted;
             stateF007.push(newRow);
         }
         saveToLocalBackup();
@@ -804,7 +826,12 @@
         for (let sheetIdx = 0; sheetIdx < totalSheets; sheetIdx++) {
             const startIdx = sheetIdx * ROWS_PER_SHEET;
             const sheetRows = stateF007.slice(startIdx, startIdx + ROWS_PER_SHEET);
-            const sheetDocNo = sheetRows[0]?.doc_set_no || "";
+            
+            // บังคับให้เลขหัวกระดาษแผ่นนี้รันเป็น 01, 02, 03... อัตโนมัติตามลำดับแผ่น
+            const sheetNoFormatted = String(sheetIdx + 1).padStart(2, '0');
+            for (let k = 0; k < sheetRows.length; k++) {
+                sheetRows[k].doc_set_no = sheetNoFormatted;
+            }
 
             const pageDiv = document.createElement("div");
             pageDiv.className = "page landscape-form-page";
@@ -845,7 +872,7 @@
                             <div style="width: 180px;"></div>
                             <div class="form-main-title">บัญชีรายชื่อ Drawing</div>
                             <div style="width: 180px; text-align: right; font-size: 15pt;">
-                                เลขที่ <input type="text" class="inline-input" value="${escapeHtml(sheetDocNo)}" ${isEditMode ? "" : "readonly"} oninput="updateF007SheetSetNo(${sheetIdx}, this.value)">
+                                เลขที่ <input type="text" class="inline-input" value="${escapeHtml(sheetNoFormatted)}" ${isEditMode ? "" : "readonly"} oninput="updateF007SheetSetNo(${sheetIdx}, this.value)">
                             </div>
                         </div>
                         <div class="form-outer-frame">
@@ -902,11 +929,11 @@
 
         const sheetsToRender = filledRows.length > 0
             ? filledRows
-            : [{ rowIndex: 0, rowNo: 1, productCode: "", drawingDocNo: "" }];
+            : [{ rowIndex: 0, rowNo: 1, seqFormatted: "01", productCode: "", drawingDocNo: "" }];
 
         sheetsToRender.forEach((item) => {
             const prodCode = item.productCode;
-            const rowSeqNo = String(item.rowNo);
+            const rowSeqNo = item.seqFormatted || String(item.rowNo).padStart(2, '0');
             const sheetObj = (prodCode && stateF008Map[prodCode])
                 ? stateF008Map[prodCode]
                 : createEmptyF008Sheet(prodCode, rowSeqNo);
@@ -1102,14 +1129,14 @@
 
     function saveToLocalBackup() {
         try {
-            localStorage.setItem("wi_mo_001_f007_v16", JSON.stringify(stateF007));
-            localStorage.setItem("wi_mo_001_f008_v16", JSON.stringify(stateF008Map));
+            localStorage.setItem("wi_mo_001_f007_v18", JSON.stringify(stateF007));
+            localStorage.setItem("wi_mo_001_f008_v18", JSON.stringify(stateF008Map));
         } catch (e) {}
     }
 
     function loadFromLocalBackup() {
         try {
-            const l007 = localStorage.getItem("wi_mo_001_f007_v16") || localStorage.getItem("wi_mo_001_f007_v15");
+            const l007 = localStorage.getItem("wi_mo_001_f007_v18") || localStorage.getItem("wi_mo_001_f007_v17");
             if (l007) {
                 const parsed007 = JSON.parse(l007);
                 if (Array.isArray(parsed007) && parsed007.length > 0) {
@@ -1121,7 +1148,7 @@
         }
 
         try {
-            const l008 = localStorage.getItem("wi_mo_001_f008_v16") || localStorage.getItem("wi_mo_001_f008_v15");
+            const l008 = localStorage.getItem("wi_mo_001_f008_v18") || localStorage.getItem("wi_mo_001_f008_v17");
             if (l008) {
                 const parsed008 = JSON.parse(l008);
                 if (parsed008 && typeof parsed008 === "object" && !Array.isArray(parsed008)) {
@@ -1136,7 +1163,6 @@
 
     async function fetchFromSupabase() {
         const badge = document.getElementById("dbStatusBadge");
-        // วาดหน้าตารางขึ้นมาก่อนทันที ป้องกันหน้าเว็บว่างเปล่าบน GitHub Pages
         renderAll();
         loadFromLocalBackup();
         renderAll();
@@ -1205,7 +1231,6 @@
         finally { if (btn) btn.innerText = origText; }
     }
 
-    // เรียกทำงานทันทีแม้ DOMContentLoaded จะผ่านไปแล้ว
     if (document.readyState === "loading") {
         window.addEventListener("DOMContentLoaded", fetchFromSupabase);
     } else {
