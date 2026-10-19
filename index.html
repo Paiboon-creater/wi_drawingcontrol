@@ -98,16 +98,6 @@
             font-size: 13px;
             border-left: 4px solid #38bdf8;
         }
-        .section-control-bar select {
-            padding: 5px 10px;
-            border-radius: 4px;
-            border: 1px solid #475569;
-            background: #1e293b;
-            color: #fff;
-            font-family: Tahoma, sans-serif;
-            font-size: 13px;
-            font-weight: bold;
-        }
 
         /* ==================== โครงสร้างหน้ากระดาษ A4 ==================== */
         .page {
@@ -141,12 +131,10 @@
             transform: none !important;
         }
 
-        .page.f008-sheet.hidden-on-screen { display: none; }
-
         @media print {
             * { transition: none !important; animation: none !important; }
             html, body, body.horizontal-view { background-color: #ffffff !important; margin: 0 !important; padding: 0 !important; }
-            .toolbar, .section-control-bar, .modal-overlay, .no-print, .file-action-btns { display: none !important; }
+            .toolbar, .section-control-bar, .modal-overlay, .no-print { display: none !important; }
             input::placeholder { color: transparent !important; opacity: 0 !important; }
             .page, body.horizontal-view .page.landscape-form-page {
                 width: 210mm !important;
@@ -159,8 +147,8 @@
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
                 overflow: hidden !important;
+                display: block !important;
             }
-            body.print-all-f008 .page.f008-sheet.hidden-on-screen { display: block !important; }
             .rotated-sheet-wrapper { width: 100% !important; height: 100% !important; position: relative !important; }
             .rotated-canvas, body.horizontal-view .page.landscape-form-page .rotated-canvas {
                 position: absolute !important; width: 265mm !important; height: 175mm !important; top: 50% !important; left: 50% !important;
@@ -215,15 +203,6 @@
         body.edit-mode .cell-input:not([readonly]), body.edit-mode .inline-input:not([readonly]) { background-color: rgba(14, 165, 233, 0.08); }
         body.edit-mode .cell-input:focus, body.edit-mode .inline-input:focus { background-color: rgba(250, 204, 21, 0.25); }
 
-        /* ปุ่มจัดการไฟล์ PDF และใบแจกจ่าย (ซ่อนเวลาพิมพ์อัตโนมัติ) */
-        .file-action-btns { position: absolute; right: 2px; top: 2px; display: flex; gap: 2px; z-index: 2; }
-        .action-mini-btn {
-            background: #0284c7; color: #fff; border: none; border-radius: 3px; font-size: 8.5px; font-family: Tahoma, sans-serif; padding: 2px 5px; cursor: pointer; opacity: 0.92; text-decoration: none;
-        }
-        .action-mini-btn:hover { opacity: 1; background: #0369a1; }
-        .action-mini-btn.pdf-btn { background: #16a34a; }
-        .action-mini-btn.pdf-btn:hover { background: #15803d; }
-
         .rev-check-cell { cursor: default; font-weight: bold; font-size: 14pt; user-select: none; }
         body.edit-mode .rev-check-cell { cursor: pointer; }
         body.edit-mode .rev-check-cell:hover { background-color: rgba(16, 185, 129, 0.15); }
@@ -262,8 +241,7 @@
         <button id="btnToggleView" class="btn btn-view active" onclick="toggleOrientationView()">โหมดมุมมอง: แนวนอนอ่านง่าย</button>
         <button id="btnLockMode" class="btn btn-lock" onclick="toggleEditLock()">สถานะ: อ่านอย่างเดียว (ปลดล็อกด้วย PIN)</button>
         <button id="btnSaveCloud" class="btn btn-save" onclick="saveAllToSupabase()">บันทึกข้อมูลลงฐานข้อมูล</button>
-        <button class="btn btn-print" onclick="printCurrentSelection()">พิมพ์หน้าปัจจุบัน (Ctrl+P)</button>
-        <button class="btn btn-add-sheet" onclick="printAllDocuments()">พิมพ์ครบทุกแผ่น</button>
+        <button class="btn btn-print" onclick="window.print()">พิมพ์ / บันทึกเป็น PDF (Ctrl+P)</button>
     </div>
 </div>
 
@@ -388,7 +366,7 @@
 <!-- ==================== ส่วนควบคุมแผ่นงาน F-MO-007 ==================== -->
 <div class="section-control-bar">
     <div>
-        <b>ส่วนที่ 1: บัญชีรายชื่อ Drawing (F-MO-007-00)</b> — ดึงรายชื่อไฟล์จากโฟลเดอร์ <code>design</code> ในถัง <code>drawing-files</code> (<span id="storageCountLabel">กำลังโหลด...</span>)
+        <b>ส่วนที่ 1: บัญชีรายชื่อ Drawing (F-MO-007-00)</b> — ดึงรายชื่อไฟล์จากโฟลเดอร์ <code>design</code> (<span id="storageCountLabel">กำลังโหลด...</span>)
     </div>
     <div>
         <button class="btn btn-add-sheet" onclick="addNewF007Sheet()">+ เพิ่มแผ่นบัญชี Drawing (แผ่นที่ <span id="nextSheetNumLabel">2</span>)</button>
@@ -399,11 +377,12 @@
 
 <!-- ==================== ส่วนควบคุมแผ่นงาน F-MO-008 ==================== -->
 <div class="section-control-bar" id="f008_control_bar">
-    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+    <div>
         <b>ส่วนที่ 2: ใบแจกจ่าย Drawing (F-MO-008-00)</b>
-        <span>เลือกดูของรหัสสินค้า:</span>
-        <select id="f008ProductSelector" onchange="selectF008Sheet(this.value)"></select>
-        <span id="f008CountBadge" style="color: #38bdf8; font-weight: bold;"></span>
+        <span id="f008CountBadge" style="color: #38bdf8; font-weight: bold; margin-left: 8px;"></span>
+    </div>
+    <div style="font-size: 12px; color: #cbd5e1;">
+        *สร้างแผ่นใหม่และวางรหัสสินค้าเรียงตามบรรทัดในตารางแรกโดยอัตโนมัติ
     </div>
 </div>
 
@@ -412,9 +391,6 @@
 <!-- Datalist สำหรับรหัสสินค้า และ ไฟล์ PDF ใน Storage -->
 <datalist id="workItemsList"></datalist>
 <datalist id="storageFilesList"></datalist>
-
-<!-- Hidden File Input สำหรับอัปโหลด PDF เข้าโฟลเดอร์ design -->
-<input type="file" id="hiddenPdfUploadInput" accept="application/pdf" style="display: none;" onchange="uploadPdfFileToStorage(event)">
 
 <!-- Modal ลงชื่อ -->
 <div id="diagModal" class="modal-overlay">
@@ -444,10 +420,8 @@
     let isEditMode = false;
     let isHorizontalView = true;
     let activeDiagTarget = null;
-    let activeUploadRowIdx = null;
     let workItemsCodes = [];
     let storageFilesMap = {};
-    let selectedProductCodeForF008 = "";
 
     let stateF007 = Array.from({ length: ROWS_PER_SHEET }, (_, i) => createEmptyF007Row(i + 1));
     let stateF008Map = {};
@@ -473,32 +447,27 @@
         return `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${encodedPath}`;
     }
 
-    function syncF008WithF007() {
-        const activeProducts = getActiveDrawingRows();
-        activeProducts.forEach((r) => {
-            const code = r.product_code.trim();
-            if (!stateF008Map[code]) {
-                stateF008Map[code] = createEmptyF008Sheet(code, r.drawing_doc_no || "");
+    function getFilledDrawingRows() {
+        const list = [];
+        stateF007.forEach((r, idx) => {
+            const code = (r.product_code || "").trim();
+            if (code) {
+                list.push({ rowIndex: idx, rowNo: r.row_no, productCode: code, drawingDocNo: r.drawing_doc_no || "" });
             }
         });
-        if (activeProducts.length > 0) {
-            const codes = activeProducts.map(r => r.product_code.trim());
-            if (!selectedProductCodeForF008 || !codes.includes(selectedProductCodeForF008)) {
-                selectedProductCodeForF008 = codes[0];
-            }
-        } else {
-            selectedProductCodeForF008 = "";
-        }
+        return list;
     }
 
-    function getActiveDrawingRows() {
-        const seen = new Set();
-        const result = [];
-        stateF007.forEach(r => {
-            const code = (r.product_code || "").trim();
-            if (code && !seen.has(code)) { seen.add(code); result.push(r); }
+    function syncF008WithF007() {
+        const filledRows = getFilledDrawingRows();
+        filledRows.forEach(item => {
+            const key = item.productCode;
+            if (!stateF008Map[key]) {
+                stateF008Map[key] = createEmptyF008Sheet(key, "");
+            } else {
+                stateF008Map[key].product_code = key;
+            }
         });
-        return result;
     }
 
     async function fetchStorageFiles() {
@@ -553,15 +522,18 @@
 
     function populateDropdownLists() {
         const storageNames = Object.keys(storageFilesMap).sort((a, b) => a.localeCompare(b));
-        document.getElementById("storageCountLabel").innerText = `พบไฟล์ PDF ${storageNames.length} รายการ`;
+        const countLabel = document.getElementById("storageCountLabel");
+        if (countLabel) countLabel.innerText = `พบไฟล์ PDF ${storageNames.length} รายการ`;
 
         const storageDatalist = document.getElementById("storageFilesList");
-        storageDatalist.innerHTML = "";
-        storageNames.forEach(fileName => {
-            const opt = document.createElement("option");
-            opt.value = fileName;
-            storageDatalist.appendChild(opt);
-        });
+        if (storageDatalist) {
+            storageDatalist.innerHTML = "";
+            storageNames.forEach(fileName => {
+                const opt = document.createElement("option");
+                opt.value = fileName;
+                storageDatalist.appendChild(opt);
+            });
+        }
 
         const combinedProductCodes = new Set(workItemsCodes);
         storageNames.forEach(fileName => {
@@ -570,12 +542,14 @@
         });
 
         const workDatalist = document.getElementById("workItemsList");
-        workDatalist.innerHTML = "";
-        Array.from(combinedProductCodes).sort((a, b) => a.localeCompare(b)).forEach(code => {
-            const opt = document.createElement("option");
-            opt.value = code;
-            workDatalist.appendChild(opt);
-        });
+        if (workDatalist) {
+            workDatalist.innerHTML = "";
+            Array.from(combinedProductCodes).sort((a, b) => a.localeCompare(b)).forEach(code => {
+                const opt = document.createElement("option");
+                opt.value = code;
+                workDatalist.appendChild(opt);
+            });
+        }
     }
 
     async function fetchWorkItems() {
@@ -612,9 +586,11 @@
 
     function renderF007Pages() {
         const container = document.getElementById("f007_pages_container");
+        if (!container) return;
         container.innerHTML = "";
         const totalSheets = Math.max(1, Math.ceil(stateF007.length / ROWS_PER_SHEET));
-        document.getElementById("nextSheetNumLabel").innerText = totalSheets + 1;
+        const sheetNumLabel = document.getElementById("nextSheetNumLabel");
+        if (sheetNumLabel) sheetNumLabel.innerText = totalSheets + 1;
 
         for (let sheetIdx = 0; sheetIdx < totalSheets; sheetIdx++) {
             const startIdx = sheetIdx * ROWS_PER_SHEET;
@@ -626,24 +602,17 @@
 
             const rowsHtml = sheetRows.map((row, rOffset) => {
                 const globalIdx = startIdx + rOffset;
-                const hasCode = (row.product_code || "").trim().length > 0;
                 const hasPdf = (row.pdf_url || "").trim().length > 0;
 
                 return `
                     <tr>
                         <td>${row.row_no}</td>
                         <td>
-                            <input type="text" class="cell-input" list="workItemsList" value="${escapeHtml(row.product_code)}" ${isEditMode ? "" : "readonly"} onchange="updateF007Product(${globalIdx}, this.value)" oninput="updateF007TextOnly(${globalIdx}, 'product_code', this.value)">
-                            <div class="file-action-btns">
-                                ${hasCode ? `<button class="action-mini-btn no-print" onclick="jumpToF008('${escapeJs(row.product_code.trim())}')">ใบแจกจ่าย</button>` : ""}
-                            </div>
+                            <input type="text" class="cell-input" list="workItemsList" value="${escapeHtml(row.product_code)}" ${isEditMode ? "" : "readonly"} onchange="updateF007Product(${globalIdx}, this.value)" oninput="onLiveF007ProductInput(${globalIdx}, this.value)">
                         </td>
                         <td>
                             <input type="text" class="cell-input center" list="storageFilesList" value="${escapeHtml(row.drawing_doc_no)}" ${isEditMode ? "" : "readonly"} onchange="updateF007DocNoAndUrl(${globalIdx}, this.value)" oninput="updateF007TextOnly(${globalIdx}, 'drawing_doc_no', this.value)">
-                            <div class="file-action-btns">
-                                ${hasPdf ? `<a href="${row.pdf_url}" target="_blank" class="action-mini-btn pdf-btn" title="คลิกเพื่อเปิดดู/พิมพ์ไฟล์ PDF Drawing">เปิด PDF</a>` : ""}
-                                ${isEditMode && hasCode ? `<button class="action-mini-btn" title="อัปโหลดไฟล์ PDF ใหม่เข้าโฟลเดอร์ design" onclick="triggerPdfUpload(${globalIdx})">อัปโหลด</button>` : ""}
-                            </div>
+                            ${hasPdf ? `<a href="${row.pdf_url}" target="_blank" class="no-print" style="position:absolute; right:3px; top:2px; font-size:9.5pt; color:#0284c7; font-weight:bold; text-decoration:none;" title="คลิกเพื่อเปิดดูไฟล์ PDF">เปิดดู</a>` : ""}
                         </td>
                         ${["rev_00","rev_01","rev_02","rev_03","rev_04","rev_05"].map(revKey => `
                             <td class="rev-check-cell" onclick="toggleRevCheck(${globalIdx}, '${revKey}')">${row[revKey] ? "✓" : ""}</td>
@@ -656,7 +625,7 @@
                 <div class="rotated-sheet-wrapper">
                     <div class="rotated-canvas">
                         <div class="form-top-bar">
-                            <div style="width: 180px; font-size: 13pt;">${totalSheets > 1 ? `แผ่นที่ ${sheetIdx + 1} /${totalSheets}` : ""}</div>
+                            <div style="width: 180px;"></div>
                             <div class="form-main-title">บัญชีรายชื่อ Drawing</div>
                             <div style="width: 180px; text-align: right; font-size: 15pt;">
                                 เลขที่ <input type="text" class="inline-input" value="${escapeHtml(sheetDocNo)}" ${isEditMode ? "" : "readonly"} oninput="updateF007SheetSetNo(${sheetIdx}, this.value)">
@@ -684,32 +653,25 @@
 
     function renderF008Pages() {
         const container = document.getElementById("f008_pages_container");
-        const selector = document.getElementById("f008ProductSelector");
+        if (!container) return;
         const badge = document.getElementById("f008CountBadge");
         container.innerHTML = "";
-        selector.innerHTML = "";
 
-        const activeRows = getActiveDrawingRows();
-        badge.innerText = `(มีใบแจกจ่ายทั้งหมด ${activeRows.length} แผ่น)`;
-        const listToRender = activeRows.length > 0 ? activeRows.map(r => r.product_code.trim()) : ["__EMPTY__"];
+        const filledRows = getFilledDrawingRows();
+        if (badge) badge.innerText = `(สร้างใบแจกจ่ายอัตโนมัติ ${filledRows.length} แผ่น ตามจำนวนรหัสสินค้าในตารางแรก)`;
 
-        listToRender.forEach((prodCode, idx) => {
-            if (prodCode !== "__EMPTY__") {
-                const opt = document.createElement("option");
-                opt.value = prodCode; opt.textContent = `${idx + 1}. ${prodCode}`;
-                if (prodCode === selectedProductCodeForF008) opt.selected = true;
-                selector.appendChild(opt);
-            } else {
-                const opt = document.createElement("option");
-                opt.value = "__EMPTY__"; opt.textContent = "(ยังไม่ได้ระบุรหัสสินค้าใน F-MO-007)";
-                selector.appendChild(opt);
-            }
+        const sheetsToRender = filledRows.length > 0
+            ? filledRows
+            : [{ rowIndex: 0, rowNo: 1, productCode: "", drawingDocNo: "" }];
 
-            const sheetObj = (prodCode !== "__EMPTY__" && stateF008Map[prodCode]) ? stateF008Map[prodCode] : createEmptyF008Sheet("", "");
-            const isSelectedOnScreen = (prodCode === "__EMPTY__") || (prodCode === selectedProductCodeForF008);
+        sheetsToRender.forEach((item) => {
+            const prodCode = item.productCode;
+            const sheetObj = (prodCode && stateF008Map[prodCode])
+                ? stateF008Map[prodCode]
+                : createEmptyF008Sheet(prodCode, "");
 
             const pageDiv = document.createElement("div");
-            pageDiv.className = `page landscape-form-page f008-sheet ${isSelectedOnScreen ? "" : "hidden-on-screen"}`;
+            pageDiv.className = "page landscape-form-page f008-sheet";
 
             const rowsHtml = sheetObj.rows_data.map((row, rIdx) => {
                 const diagHtml = diagKeys.map(k => {
@@ -724,7 +686,7 @@
                     `;
                 }).join("");
 
-                return `<tr><td>${row.row_no}</td><td><input type="text" class="cell-input" value="${escapeHtml(row.department_name)}" ${isEditMode && prodCode !== "__EMPTY__" ? "" : "readonly"} oninput="updateF008Dept('${escapeJs(prodCode)}', ${rIdx}, this.value)"></td>${diagHtml}</tr>`;
+                return `<tr><td>${row.row_no}</td><td><input type="text" class="cell-input" value="${escapeHtml(row.department_name)}" ${isEditMode && prodCode ? "" : "readonly"} oninput="updateF008Dept('${escapeJs(prodCode)}', ${rIdx}, this.value)"></td>${diagHtml}</tr>`;
             }).join("");
 
             pageDiv.innerHTML = `
@@ -734,12 +696,12 @@
                             <div style="width: 180px;"></div>
                             <div class="form-main-title">ใบแจกจ่าย Drawing (สำเนาควบคุม)</div>
                             <div style="width: 180px; text-align: right; font-size: 15pt;">
-                                เลขที่ <input type="text" class="inline-input" value="${escapeHtml(sheetObj.doc_set_no)}" ${isEditMode && prodCode !== "__EMPTY__" ? "" : "readonly"} oninput="updateF008DocNo('${escapeJs(prodCode)}', this.value)">
+                                เลขที่ <input type="text" class="inline-input" value="${escapeHtml(sheetObj.doc_set_no)}" ${isEditMode && prodCode ? "" : "readonly"} oninput="updateF008DocNo('${escapeJs(prodCode)}', this.value)">
                             </div>
                         </div>
                         <div class="form-outer-frame">
                             <div class="form-sub-header">
-                                <div>รหัสสินค้า <input type="text" class="inline-input" style="width: 240px; font-weight: bold;" value="${escapeHtml(prodCode === '__EMPTY__' ? '' : prodCode)}" readonly></div>
+                                <div>รหัสสินค้า <input type="text" class="inline-input" style="width: 260px; font-weight: bold;" value="${escapeHtml(prodCode)}" readonly></div>
                                 <div></div>
                             </div>
                             <table class="form-grid">
@@ -766,25 +728,27 @@
     function escapeHtml(str) { return !str ? "" : String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
     function escapeJs(str) { return !str ? "" : String(str).replace(/\\/g, "\\\\").replace(/'/g, "\\'"); }
 
-    // เมื่อเลือกรหัสสินค้า: ไม่รันเลขที่เอกสารอัตโนมัติ (ปล่อยว่างให้ผู้ใช้พิมพ์เอง) แต่ถ้าชื่อตรงกับไฟล์ใน design จะผูกลิงก์ PDF ให้พร้อมเปิดดู
-    function updateF007Product(idx, val) {
+    function onLiveF007ProductInput(idx, val) {
         const code = val.trim();
         stateF007[idx].product_code = code;
 
         const matchingFile = Object.keys(storageFilesMap).find(
             fName => fName.toLowerCase() === code.toLowerCase() || fName.replace(/\.pdf$/i, "").toLowerCase() === code.toLowerCase()
         );
-
         if (matchingFile) {
             stateF007[idx].pdf_url = buildStoragePublicUrl(storageFilesMap[matchingFile]);
         }
 
-        selectedProductCodeForF008 = code;
+        syncF008WithF007();
         saveToLocalBackup();
-        renderAll();
+        renderF008Pages();
     }
 
-    // เมื่อพิมพ์หรือเลือกช่องเลขที่เอกสาร: ผู้ใช้พิมพ์เลขเองได้อย่างอิสระ หากตรงกับชื่อไฟล์จะผูกลิงก์ให้ด้วย
+    function updateF007Product(idx, val) {
+        onLiveF007ProductInput(idx, val);
+        renderF007Pages();
+    }
+
     function updateF007DocNoAndUrl(idx, val) {
         const trimmed = val.trim();
         stateF007[idx].drawing_doc_no = trimmed;
@@ -798,53 +762,6 @@
         renderF007Pages();
     }
 
-    function triggerPdfUpload(globalIdx) {
-        activeUploadRowIdx = globalIdx;
-        document.getElementById("hiddenPdfUploadInput").click();
-    }
-
-    async function uploadPdfFileToStorage(event) {
-        const file = event.target.files[0];
-        if (!file || activeUploadRowIdx === null) return;
-
-        const row = stateF007[activeUploadRowIdx];
-        const fileName = file.name;
-        const uploadPath = `${STORAGE_FOLDER}/${fileName}`;
-        const encodedUploadPath = uploadPath.split("/").map(seg => encodeURIComponent(seg)).join("/");
-
-        const badge = document.getElementById("dbStatusBadge");
-        badge.innerText = "กำลังอัปโหลดไฟล์ PDF เข้าโฟลเดอร์ design...";
-
-        try {
-            const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${encodedUploadPath}`, {
-                method: "POST",
-                headers: {
-                    "apikey": SUPABASE_KEY,
-                    "Authorization": `Bearer ${SUPABASE_KEY}`,
-                    "Content-Type": file.type || "application/pdf",
-                    "x-upsert": "true"
-                },
-                body: file
-            });
-            if (!res.ok) throw new Error("Upload failed");
-
-            // ผูกเฉพาะลิงก์ PDF โดยไม่ทับหรือรันเลขที่เอกสารอัตโนมัติ
-            row.pdf_url = buildStoragePublicUrl(uploadPath);
-
-            saveToLocalBackup();
-            await fetchStorageFiles();
-            renderAll();
-            badge.className = "status-badge status-online";
-            badge.innerText = "อัปโหลดและผูกไฟล์ PDF สำเร็จ!";
-            alert(`อัปโหลดไฟล์ ${fileName} เข้าโฟลเดอร์ design สำเร็จเรียบร้อย!`);
-        } catch (err) {
-            alert("อัปโหลดไม่สำเร็จ! กรุณารันคำสั่ง SQL เปิด Policy ของ Storage Bucket 'drawing-files'");
-        } finally {
-            event.target.value = "";
-            activeUploadRowIdx = null;
-        }
-    }
-
     function updateF007SheetSetNo(sheetIdx, val) {
         const start = sheetIdx * ROWS_PER_SHEET;
         for (let i = start; i < start + ROWS_PER_SHEET && i < stateF007.length; i++) stateF007[i].doc_set_no = val;
@@ -854,44 +771,58 @@
     function toggleRevCheck(idx, revKey) {
         if (!isEditMode) return; stateF007[idx][revKey] = !stateF007[idx][revKey]; saveToLocalBackup(); renderF007Pages();
     }
-    function selectF008Sheet(prodCode) { selectedProductCodeForF008 = prodCode; renderF008Pages(); }
-    function jumpToF008(prodCode) { selectedProductCodeForF008 = prodCode; renderF008Pages(); document.getElementById("f008_control_bar").scrollIntoView({ behavior: "smooth" }); }
     function updateF008DocNo(prodCode, val) { if (stateF008Map[prodCode]) { stateF008Map[prodCode].doc_set_no = val; saveToLocalBackup(); } }
     function updateF008Dept(prodCode, rowIdx, val) { if (stateF008Map[prodCode]) { stateF008Map[prodCode].rows_data[rowIdx].department_name = val; saveToLocalBackup(); } }
 
     function openDiagModal(prodCode, rowIdx, key) {
-        if (!isEditMode || prodCode === "__EMPTY__") return;
+        if (!isEditMode || !prodCode) return;
         activeDiagTarget = { prodCode, rowIdx, key };
         const sheet = stateF008Map[prodCode];
         const current = (sheet.rows_data[rowIdx].cells_data && sheet.rows_data[rowIdx].cells_data[key]) || { sign: "", date: "" };
-        document.getElementById("modalSignInput").value = current.sign || "";
-        document.getElementById("modalDateInput").value = current.date || "";
-        document.getElementById("diagModal").style.display = "flex";
-        document.getElementById("modalSignInput").focus();
+        const signInput = document.getElementById("modalSignInput");
+        const dateInput = document.getElementById("modalDateInput");
+        if (signInput) signInput.value = current.sign || "";
+        if (dateInput) dateInput.value = current.date || "";
+        const modal = document.getElementById("diagModal");
+        if (modal) modal.style.display = "flex";
+        if (signInput) signInput.focus();
     }
-    function closeDiagModal() { document.getElementById("diagModal").style.display = "none"; activeDiagTarget = null; }
+    function closeDiagModal() {
+        const modal = document.getElementById("diagModal");
+        if (modal) modal.style.display = "none";
+        activeDiagTarget = null;
+    }
     function fillTodayDate() {
         const d = new Date();
-        document.getElementById("modalDateInput").value = `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getFullYear()+543).slice(-2)}`;
+        const dateInput = document.getElementById("modalDateInput");
+        if (dateInput) {
+            dateInput.value = `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getFullYear()+543).slice(-2)}`;
+        }
     }
-    function clearDiagCell() { document.getElementById("modalSignInput").value = ""; document.getElementById("modalDateInput").value = ""; }
+    function clearDiagCell() {
+        const signInput = document.getElementById("modalSignInput");
+        const dateInput = document.getElementById("modalDateInput");
+        if (signInput) signInput.value = "";
+        if (dateInput) dateInput.value = "";
+    }
     function confirmDiagModal() {
         if (!activeDiagTarget) return;
         const { prodCode, rowIdx, key } = activeDiagTarget;
         const sheet = stateF008Map[prodCode];
         if (!sheet.rows_data[rowIdx].cells_data) sheet.rows_data[rowIdx].cells_data = {};
-        sheet.rows_data[rowIdx].cells_data[key] = { sign: document.getElementById("modalSignInput").value.trim(), date: document.getElementById("modalDateInput").value.trim() };
+        const signInput = document.getElementById("modalSignInput");
+        const dateInput = document.getElementById("modalDateInput");
+        sheet.rows_data[rowIdx].cells_data[key] = {
+            sign: signInput ? signInput.value.trim() : "",
+            date: dateInput ? dateInput.value.trim() : ""
+        };
         closeDiagModal(); saveToLocalBackup(); renderF008Pages();
     }
 
-    function printCurrentSelection() { document.body.classList.remove("print-all-f008"); window.print(); }
-    function printAllDocuments() {
-        document.body.classList.add("print-all-f008"); window.print();
-        setTimeout(() => { document.body.classList.remove("print-all-f008"); }, 500);
-    }
     function toggleOrientationView() {
         isHorizontalView = !isHorizontalView;
         const btn = document.getElementById("btnToggleView");
+        if (!btn) return;
         if (isHorizontalView) { document.body.classList.add("horizontal-view"); btn.classList.add("active"); btn.innerText = "โหมดมุมมอง: แนวนอนอ่านง่าย"; }
         else { document.body.classList.remove("horizontal-view"); btn.classList.remove("active"); btn.innerText = "โหมดมุมมอง: A4 เสมือนพิมพ์"; }
     }
@@ -900,23 +831,29 @@
             const pin = prompt("กรุณากรอกรหัส Master PIN:");
             if (pin === MASTER_PIN) {
                 isEditMode = true; document.body.classList.add("edit-mode");
-                const btn = document.getElementById("btnLockMode"); btn.classList.add("unlocked"); btn.innerText = "สถานะ: โหมดแก้ไขข้อมูล";
-                document.getElementById("btnSaveCloud").style.display = "inline-flex"; renderAll();
+                const btn = document.getElementById("btnLockMode");
+                if (btn) { btn.classList.add("unlocked"); btn.innerText = "สถานะ: โหมดแก้ไขข้อมูล"; }
+                const saveBtn = document.getElementById("btnSaveCloud");
+                if (saveBtn) saveBtn.style.display = "inline-flex";
+                renderAll();
             } else if (pin !== null) alert("รหัส PIN ไม่ถูกต้อง!");
         } else {
             isEditMode = false; document.body.classList.remove("edit-mode");
-            const btn = document.getElementById("btnLockMode"); btn.classList.remove("unlocked"); btn.innerText = "สถานะ: อ่านอย่างเดียว";
-            document.getElementById("btnSaveCloud").style.display = "none"; renderAll();
+            const btn = document.getElementById("btnLockMode");
+            if (btn) { btn.classList.remove("unlocked"); btn.innerText = "สถานะ: อ่านอย่างเดียว"; }
+            const saveBtn = document.getElementById("btnSaveCloud");
+            if (saveBtn) saveBtn.style.display = "none";
+            renderAll();
         }
     }
 
     function saveToLocalBackup() {
-        localStorage.setItem("wi_mo_001_f007_v6", JSON.stringify(stateF007));
-        localStorage.setItem("wi_mo_001_f008_v6", JSON.stringify(stateF008Map));
+        localStorage.setItem("wi_mo_001_f007_v8", JSON.stringify(stateF007));
+        localStorage.setItem("wi_mo_001_f008_v8", JSON.stringify(stateF008Map));
     }
     function loadFromLocalBackup() {
-        const l007 = localStorage.getItem("wi_mo_001_f007_v6");
-        const l008 = localStorage.getItem("wi_mo_001_f008_v6");
+        const l007 = localStorage.getItem("wi_mo_001_f007_v8");
+        const l008 = localStorage.getItem("wi_mo_001_f008_v8");
         if (l007) stateF007 = JSON.parse(l007);
         if (l008) stateF008Map = JSON.parse(l008);
     }
@@ -946,14 +883,17 @@
                     data008.forEach(item => { if (item.product_code && Array.isArray(item.rows_data)) stateF008Map[item.product_code] = item; });
                 }
             }
-            badge.className = "status-badge status-online"; badge.innerText = "เชื่อมต่อ Storage Dropdown สำเร็จ";
+            if (badge) { badge.className = "status-badge status-online"; badge.innerText = "เชื่อมต่อ Storage Dropdown สำเร็จ"; }
             saveToLocalBackup(); renderAll();
-        } catch (err) { badge.className = "status-badge status-offline"; badge.innerText = "โหมดสำรองในเครื่อง (Offline)"; }
+        } catch (err) {
+            if (badge) { badge.className = "status-badge status-offline"; badge.innerText = "โหมดสำรองในเครื่อง (Offline)"; }
+        }
     }
 
     async function saveAllToSupabase() {
         const btn = document.getElementById("btnSaveCloud");
-        const origText = btn.innerText; btn.innerText = "กำลังบันทึก...";
+        const origText = btn ? btn.innerText : "";
+        if (btn) btn.innerText = "กำลังบันทึก...";
         syncF008WithF007(); saveToLocalBackup();
         try {
             const headers = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates" };
@@ -963,8 +903,8 @@
             const responses = await Promise.all(reqs);
             if (responses.some(r => !r.ok)) throw new Error("Save error");
             alert("บันทึกข้อมูลและลิงก์ PDF ลงฐานข้อมูล Supabase สำเร็จ!");
-        } catch (err) { alert("บันทึกในเครื่องเรียบร้อยแล้ว (กรุณาตรวจสอบว่าได้รันคำสั่ง SQL เพิ่มคอลัมน์ pdf_url หรือยัง)"); }
-        finally { btn.innerText = origText; }
+        } catch (err) { alert("บันทึกในเครื่องเรียบร้อยแล้ว"); }
+        finally { if (btn) btn.innerText = origText; }
     }
 
     window.addEventListener("DOMContentLoaded", fetchFromSupabase);
