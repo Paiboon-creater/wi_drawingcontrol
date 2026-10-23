@@ -406,10 +406,10 @@
 <!-- ==================== ส่วนควบคุมแผ่นงาน F-MO-007 ==================== -->
 <div class="section-control-bar">
     <div>
-        <b>ส่วนที่ 1: บัญชีรายชื่อ Drawing (F-MO-007-00)</b> — ดึงไฟล์ PDF ทั้งหมดจากฐานข้อมูลมาวางเรียงในช่อง "เลขที่เอกสาร" อัตโนมัติ (<span id="storageCountLabel">กำลังโหลด...</span>)
+        <b>ส่วนที่ 1: บัญชีรายชื่อ Drawing (F-MO-007-00)</b> — ดึงไฟล์ PDF เรียงตาม<b>วันที่อัปโหลดก่อน-หลัง</b>อัตโนมัติ (<span id="storageCountLabel">กำลังโหลด...</span>)
     </div>
     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <button class="btn btn-print" onclick="forceFillAllPdfFiles()">ดึงไฟล์ PDF ทั้งหมดมาเรียงใหม่</button>
+        <button class="btn btn-print" onclick="forceFillAllPdfFiles()">ดึงไฟล์ PDF ทั้งหมดมาเรียงใหม่ (ตามวันที่)</button>
         <button class="btn btn-add-sheet" onclick="addNewF007Sheet()">+ เพิ่มแผ่นบัญชี Drawing (แผ่นที่ <span id="nextSheetNumLabel">2</span>)</button>
     </div>
 </div>
@@ -471,6 +471,7 @@
     let activeDiagTarget = null;
     let workItemsCodes = [];
     let storageFilesMap = {};
+    let storageFilesMeta = {}; // เก็บเวลาที่อัปโหลด (created_at) เพื่อเรียงตามวันที่
 
     let stateF007 = Array.from({ length: ROWS_PER_SHEET }, (_, i) => createEmptyF007Row(i + 1));
     let stateF008Map = {};
@@ -483,6 +484,18 @@
             "Authorization": `Bearer ${SUPABASE_KEY}`,
             ...extra
         };
+    }
+
+    // ฟังก์ชันเรียงรายชื่อไฟล์ตามวันที่อัปโหลดก่อน-หลัง (เก่า -> ใหม่)
+    function getSortedStorageFileNames() {
+        return Object.keys(storageFilesMap).sort((a, b) => {
+            const timeA = storageFilesMeta[a] || 0;
+            const timeB = storageFilesMeta[b] || 0;
+            if (timeA !== timeB) {
+                return timeA - timeB; // เรียงตามวันที่ก่อน-หลัง
+            }
+            return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+        });
     }
 
     function createEmptyF007Row(rowNo) {
@@ -564,14 +577,13 @@
     }
 
     function autoFillStorageFilesToRows(overwriteAll = false) {
-        const storageNames = Object.keys(storageFilesMap).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+        const storageNames = getSortedStorageFileNames();
         if (storageNames.length === 0) return;
 
         if (overwriteAll) {
             const neededSheets = Math.max(1, Math.ceil(storageNames.length / ROWS_PER_SHEET));
             stateF007 = Array.from({ length: neededSheets * ROWS_PER_SHEET }, (_, i) => {
                 const r = createEmptyF007Row(i + 1);
-                // รันเลขหัวกระดาษแผ่นละ 01, 02, 03... ตามลำดับแผ่น
                 const sheetIdx = Math.floor(i / ROWS_PER_SHEET);
                 r.doc_set_no = String(sheetIdx + 1).padStart(2, '0');
                 return r;
@@ -593,7 +605,6 @@
 
         const missingFiles = storageNames.filter(fName => !existingDocs.has(fName.toLowerCase()));
         if (missingFiles.length === 0) {
-            // อัปเดตรันเลขหัวกระดาษ F-MO-007 ตามลำดับแผ่นให้ถูกต้องเสมอ
             const totalSheets = Math.max(1, Math.ceil(stateF007.length / ROWS_PER_SHEET));
             for (let s = 0; s < totalSheets; s++) {
                 const sheetNoFormatted = String(s + 1).padStart(2, '0');
@@ -631,7 +642,6 @@
             }
         }
 
-        // จัดระเบียบเลขหัวกระดาษแผ่นละ 01, 02, 03... ใหม่ทั้งหมดตามจำนวนแผ่นจริง
         const totalSheets = Math.max(1, Math.ceil(stateF007.length / ROWS_PER_SHEET));
         for (let s = 0; s < totalSheets; s++) {
             const sheetNoFormatted = String(s + 1).padStart(2, '0');
@@ -643,7 +653,7 @@
 
     async function forceFillAllPdfFiles() {
         await fetchStorageFiles();
-        const storageNames = Object.keys(storageFilesMap);
+        const storageNames = getSortedStorageFileNames();
         if (storageNames.length === 0) {
             alert("ไม่พบไฟล์ PDF ในถังข้อมูล Storage");
             return;
@@ -695,6 +705,7 @@
 
     async function fetchStorageFiles() {
         storageFilesMap = {};
+        storageFilesMeta = {};
         try {
             const headers = getSupabaseHeaders({ "Content-Type": "application/json" });
 
@@ -702,12 +713,12 @@
                 fetch(`${SUPABASE_URL}/storage/v1/object/list/${STORAGE_BUCKET}`, {
                     method: "POST",
                     headers,
-                    body: JSON.stringify({ prefix: STORAGE_FOLDER, limit: 1000, offset: 0, sortBy: { column: "name", order: "asc" } })
+                    body: JSON.stringify({ prefix: STORAGE_FOLDER, limit: 1000, offset: 0, sortBy: { column: "created_at", order: "asc" } })
                 }),
                 fetch(`${SUPABASE_URL}/storage/v1/object/list/${STORAGE_BUCKET}`, {
                     method: "POST",
                     headers,
-                    body: JSON.stringify({ prefix: "", limit: 1000, offset: 0, sortBy: { column: "name", order: "asc" } })
+                    body: JSON.stringify({ prefix: "", limit: 1000, offset: 0, sortBy: { column: "created_at", order: "asc" } })
                 })
             ]);
 
@@ -717,6 +728,8 @@
                     designFiles.forEach(item => {
                         if (item && item.name && item.name !== ".emptyFolderPlaceholder") {
                             storageFilesMap[item.name] = `${STORAGE_FOLDER}/${item.name}`;
+                            const timeVal = item.created_at || item.updated_at || "";
+                            storageFilesMeta[item.name] = timeVal ? new Date(timeVal).getTime() : 0;
                         }
                     });
                 }
@@ -728,6 +741,8 @@
                     rootFiles.forEach(item => {
                         if (item && item.name && item.id && item.name !== ".emptyFolderPlaceholder" && !storageFilesMap[item.name]) {
                             storageFilesMap[item.name] = item.name;
+                            const timeVal = item.created_at || item.updated_at || "";
+                            storageFilesMeta[item.name] = timeVal ? new Date(timeVal).getTime() : 0;
                         }
                     });
                 }
@@ -742,7 +757,7 @@
     }
 
     function populateDropdownLists() {
-        const storageNames = Object.keys(storageFilesMap).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+        const storageNames = getSortedStorageFileNames();
         const countLabel = document.getElementById("storageCountLabel");
         if (countLabel) countLabel.innerText = `พบไฟล์ PDF ${storageNames.length} รายการ`;
 
@@ -765,7 +780,7 @@
         const workDatalist = document.getElementById("workItemsList");
         if (workDatalist) {
             workDatalist.innerHTML = "";
-            Array.from(combinedProductCodes).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).forEach(code => {
+            Array.from(combinedProductCodes).forEach(code => {
                 const opt = document.createElement("option");
                 opt.value = code;
                 workDatalist.appendChild(opt);
@@ -827,7 +842,6 @@
             const startIdx = sheetIdx * ROWS_PER_SHEET;
             const sheetRows = stateF007.slice(startIdx, startIdx + ROWS_PER_SHEET);
             
-            // บังคับให้เลขหัวกระดาษแผ่นนี้รันเป็น 01, 02, 03... อัตโนมัติตามลำดับแผ่น
             const sheetNoFormatted = String(sheetIdx + 1).padStart(2, '0');
             for (let k = 0; k < sheetRows.length; k++) {
                 sheetRows[k].doc_set_no = sheetNoFormatted;
@@ -1129,14 +1143,14 @@
 
     function saveToLocalBackup() {
         try {
-            localStorage.setItem("wi_mo_001_f007_v18", JSON.stringify(stateF007));
-            localStorage.setItem("wi_mo_001_f008_v18", JSON.stringify(stateF008Map));
+            localStorage.setItem("wi_mo_001_f007_v19", JSON.stringify(stateF007));
+            localStorage.setItem("wi_mo_001_f008_v19", JSON.stringify(stateF008Map));
         } catch (e) {}
     }
 
     function loadFromLocalBackup() {
         try {
-            const l007 = localStorage.getItem("wi_mo_001_f007_v18") || localStorage.getItem("wi_mo_001_f007_v17");
+            const l007 = localStorage.getItem("wi_mo_001_f007_v19") || localStorage.getItem("wi_mo_001_f007_v18");
             if (l007) {
                 const parsed007 = JSON.parse(l007);
                 if (Array.isArray(parsed007) && parsed007.length > 0) {
@@ -1148,7 +1162,7 @@
         }
 
         try {
-            const l008 = localStorage.getItem("wi_mo_001_f008_v18") || localStorage.getItem("wi_mo_001_f008_v17");
+            const l008 = localStorage.getItem("wi_mo_001_f008_v19") || localStorage.getItem("wi_mo_001_f008_v18");
             if (l008) {
                 const parsed008 = JSON.parse(l008);
                 if (parsed008 && typeof parsed008 === "object" && !Array.isArray(parsed008)) {
